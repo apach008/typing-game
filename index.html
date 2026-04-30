@@ -226,9 +226,23 @@
       color: #ffe8a3;
     }
 
+    .expected {
+      display: inline-block;
+      min-width: 0.7em;
+      color: #111827;
+      background: #ffdf82;
+      text-shadow: none;
+      animation: expectedFlash 0.18s steps(2, end) infinite;
+    }
+
     .wrong {
       animation: shake 0.18s linear;
       border-color: var(--danger);
+    }
+
+    @keyframes expectedFlash {
+      0%, 100% { background: #ffdf82; }
+      50% { background: #ff6a61; }
     }
 
     @keyframes shake {
@@ -479,6 +493,8 @@
       const ADVENTURE_CLEAR_BONUS = 1000;
       const HERO_HIT_X = 154;
       const BASE_SPAWN_X = 1040;
+      const TYPO_LOCK_SECONDS = 0.16;
+      const TYPO_FLASH_SECONDS = 0.42;
       const DIFFICULTY_REACTION_BUFFER = {
         easy: 1.2,
         normal: 1.0,
@@ -505,6 +521,8 @@
           nextSpawn: 1.4,
           entities: [],
           typed: "",
+          typoLock: 0,
+          expectedFlash: 0,
           totalTyped: 0,
           correctTyped: 0,
           completedChars: 0,
@@ -669,6 +687,7 @@
         state.boss = boss;
         state.spawnClock = 0;
         state.typed = "";
+        clearTypoRecovery();
         triggerComboBurst(`Level ${level} boss`, 1.4);
         beep("level");
       }
@@ -804,6 +823,7 @@
           target.word = target.words[target.wordIndex];
           state.completedChars += state.typed.length;
           state.typed = "";
+          clearTypoRecovery();
           state.action = "attack";
           state.actionClock = 0.28;
           if (target.type === "boss") {
@@ -819,6 +839,7 @@
         state.streak += 1;
         state.bestStreak = Math.max(state.bestStreak, state.streak);
         state.typed = "";
+        clearTypoRecovery();
         state.action = target.category === "enemy" || target.type === "flying" || target.type === "shielded" ? "attack" : "jump";
         state.actionClock = 0.45;
         if (target.type === "boss") {
@@ -848,18 +869,36 @@
         }
       }
 
-      function failKey() {
+      function clearTypoRecovery() {
+        state.typoLock = 0;
+        state.expectedFlash = 0;
+      }
+
+      function expectedLetter(target) {
+        if (!target) return "";
+        return target.word[state.typed.length] || "";
+      }
+
+      function displayLetter(letter) {
+        return letter === " " ? "space" : letter;
+      }
+
+      function failKey(target) {
         if (state.powerups.shield > 0) {
           state.powerups.shield -= 1;
           state.powerups.message = "Shield saved";
           state.powerups.messageClock = 1;
           state.hurtClock = 0.2;
+          state.typoLock = TYPO_LOCK_SECONDS;
+          state.expectedFlash = expectedLetter(target) ? TYPO_FLASH_SECONDS : 0;
           beep("level");
           return;
         }
         state.streak = 0;
         state.score = Math.max(0, state.score - 15);
         state.hurtClock = 0.25;
+        state.typoLock = TYPO_LOCK_SECONDS;
+        state.expectedFlash = expectedLetter(target) ? TYPO_FLASH_SECONDS : 0;
         els.typebar.classList.remove("wrong");
         void els.typebar.offsetWidth;
         els.typebar.classList.add("wrong");
@@ -874,11 +913,13 @@
         target.pop = 0;
         if (target.optional) {
           state.typed = "";
+          clearTypoRecovery();
           return;
         }
         state.hearts -= 1;
         state.streak = 0;
         state.typed = "";
+        clearTypoRecovery();
         state.action = "hurt";
         state.actionClock = 0.36;
         state.hurtClock = 0.5;
@@ -897,8 +938,13 @@
         }
         if (state.mode !== "playing" || event.ctrlKey || event.metaKey || event.altKey) return;
         if (state.countdown > 0) return;
+        if (state.typoLock > 0) {
+          event.preventDefault();
+          return;
+        }
         if (event.key === "Backspace") {
           state.typed = state.typed.slice(0, -1);
+          clearTypoRecovery();
           event.preventDefault();
           return;
         }
@@ -911,10 +957,11 @@
         if (target && target.word[state.typed.length] === key) {
           state.correctTyped += 1;
           state.typed += key;
+          clearTypoRecovery();
           beep("key");
           if (state.typed === target.word) completeTarget(target);
         } else {
-          failKey();
+          failKey(target);
         }
       }
 
@@ -949,8 +996,12 @@
           return;
         }
         const typed = target.word.slice(0, state.typed.length);
-        const pending = target.word.slice(state.typed.length);
-        els.typebar.innerHTML = `<span class="typed">${typed}</span><span class="pending">${pending}</span>`;
+        const flashExpected = state.expectedFlash > 0 && expectedLetter(target);
+        const expected = flashExpected ? target.word[state.typed.length] : "";
+        const pendingStart = state.typed.length + (flashExpected ? 1 : 0);
+        const pending = target.word.slice(pendingStart);
+        const expectedHtml = flashExpected ? `<span class="expected">${displayLetter(expected)}</span>` : "";
+        els.typebar.innerHTML = `<span class="typed">${typed}</span>${expectedHtml}<span class="pending">${pending}</span>`;
       }
 
       function activePowerupLabel() {
@@ -988,6 +1039,8 @@
         state.spawnClock += state.boss ? 0 : dt;
         state.actionClock = Math.max(0, state.actionClock - dt);
         state.hurtClock = Math.max(0, state.hurtClock - dt);
+        state.typoLock = Math.max(0, state.typoLock - dt);
+        state.expectedFlash = Math.max(0, state.expectedFlash - dt);
         state.powerups.focus = Math.max(0, state.powerups.focus - dt);
         state.powerups.frenzy = Math.max(0, state.powerups.frenzy - dt);
         state.powerups.messageClock = Math.max(0, state.powerups.messageClock - dt);
@@ -1210,7 +1263,10 @@
         const powerupLabel = entity.powerup ? `${entity.powerup.label}: ` : "";
         const prefix = `${powerupLabel}${progress}`;
         const typed = isTarget ? entity.word.slice(0, state.typed.length) : "";
-        const pending = isTarget ? entity.word.slice(state.typed.length) : entity.word;
+        const flashExpected = isTarget && state.expectedFlash > 0 && expectedLetter(entity);
+        const expected = flashExpected ? entity.word[state.typed.length] : "";
+        const pendingStart = isTarget ? state.typed.length + (flashExpected ? 1 : 0) : 0;
+        const pending = entity.word.slice(pendingStart);
         const label = `${prefix}${entity.word}`;
         const width = Math.max(74, ctx.measureText(label).width + 22);
         const x = entity.x + entity.w / 2 - width / 2;
@@ -1218,9 +1274,11 @@
         pixelRect(x, y, width, 34, "#111827");
         pixelRect(x + 3, y + 3, width - 6, 28, isTarget ? "#37476c" : entity.optional ? "#26485a" : "#253049");
         const pendingColor = entity.type === "powerup" ? "#d8ffd1" : entity.optional ? "#b9fbff" : "#ffe9a6";
+        const expectedColor = Math.floor(performance.now() / 90) % 2 === 0 ? "#ffdf82" : "#ff6a61";
         drawCenteredSegments([
           { text: prefix, color: pendingColor },
           { text: typed, color: "#7cf4a1" },
+          { text: flashExpected ? displayLetter(expected) : "", color: expectedColor },
           { text: pending, color: pendingColor }
         ], entity.x + entity.w / 2, y + 24);
       }

@@ -75,7 +75,7 @@
   - Highlight typed letters directly in the word bubble above the current target.
   - Keep the bottom typebar, but make the in-world target readable without looking away from the action.
 
-- [ ] Add typo recovery rules.
+- [x] Add typo recovery rules.
   - Option A: wrong key damages streak but does not reset typed progress.
   - Option B: wrong key flashes the expected letter and pauses input briefly.
   - Pick the version that feels more like a typing trainer than a punishment trap.
