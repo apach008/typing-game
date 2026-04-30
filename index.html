@@ -187,18 +187,37 @@
       color: #fff3c4;
     }
 
-    .difficulty button {
+    .difficulty button,
+    .run-modes button,
+    .typing-modes button,
+    .settings-options .mode-option {
       display: grid;
       gap: 4px;
       align-content: center;
+    }
+
+    .difficulty button {
       min-height: 86px;
     }
 
-    .difficulty-label {
+    .typing-modes button,
+    .settings-options .mode-option {
+      min-height: 74px;
+    }
+
+    .run-modes button {
+      min-height: 76px;
+    }
+
+    .difficulty-label,
+    .run-mode-label,
+    .mode-label {
       display: block;
     }
 
-    .difficulty-description {
+    .difficulty-description,
+    .run-mode-description,
+    .mode-description {
       display: block;
       color: #ddd5b5;
       font-size: 12px;
@@ -206,7 +225,10 @@
       line-height: 1.25;
     }
 
-    .difficulty button.active .difficulty-description {
+    .difficulty button.active .difficulty-description,
+    .run-modes button.active .run-mode-description,
+    .typing-modes button.active .mode-description,
+    .settings-options .mode-option.active .mode-description {
       color: #fff0bc;
     }
 
@@ -945,10 +967,22 @@
           <h1>TypeQuest Runner</h1>
           <p>Type the word above the next threat. Obstacles make the hero jump, enemies trigger attacks, and every clean word keeps the run alive.</p>
           <div class="run-modes" role="group" aria-label="Run mode">
-            <button class="active" data-run-mode="endless">Endless</button>
-            <button data-run-mode="adventure">Adventure</button>
-            <button data-run-mode="daily">Daily</button>
-            <button data-run-mode="practice">Practice</button>
+            <button class="active" data-run-mode="endless">
+              <span class="run-mode-label">Endless</span>
+              <span class="run-mode-description">Survive as long as you can.</span>
+            </button>
+            <button data-run-mode="adventure">
+              <span class="run-mode-label">Adventure</span>
+              <span class="run-mode-description">Timed stages with a boss.</span>
+            </button>
+            <button data-run-mode="daily">
+              <span class="run-mode-label">Daily</span>
+              <span class="run-mode-description">Same challenge for everyone.</span>
+            </button>
+            <button data-run-mode="practice">
+              <span class="run-mode-label">Practice</span>
+              <span class="run-mode-description">Untimed passage practice.</span>
+            </button>
           </div>
           <section class="daily-panel" id="dailyPanel" aria-labelledby="dailyTitle" hidden>
             <h2 id="dailyTitle">Today's Daily</h2>
@@ -977,9 +1011,18 @@
             </button>
           </div>
           <div class="typing-modes" role="group" aria-label="Typing mode">
-            <button class="active" data-typing-mode="beginner">Beginner</button>
-            <button data-typing-mode="advanced">Advanced</button>
-            <button data-typing-mode="expert">Expert</button>
+            <button class="active" data-typing-mode="beginner">
+              <span class="mode-label">Beginner</span>
+              <span class="mode-description">Lowercase words only.</span>
+            </button>
+            <button data-typing-mode="advanced">
+              <span class="mode-label">Advanced</span>
+              <span class="mode-description">Adds punctuation and case.</span>
+            </button>
+            <button data-typing-mode="expert">
+              <span class="mode-label">Expert</span>
+              <span class="mode-description">Adds symbols and numbers.</span>
+            </button>
           </div>
           <section class="drill-panel" aria-labelledby="drillTitle">
             <h2 id="drillTitle">Target Drill</h2>
@@ -1097,9 +1140,18 @@
           <section class="settings-section">
             <h3>Default Typing Mode</h3>
             <div class="settings-options" role="group" aria-label="Default typing mode">
-              <button type="button" data-default-typing-mode="beginner">Beginner</button>
-              <button type="button" data-default-typing-mode="advanced">Advanced</button>
-              <button type="button" data-default-typing-mode="expert">Expert</button>
+              <button class="mode-option" type="button" data-default-typing-mode="beginner">
+                <span class="mode-label">Beginner</span>
+                <span class="mode-description">Lowercase words only.</span>
+              </button>
+              <button class="mode-option" type="button" data-default-typing-mode="advanced">
+                <span class="mode-label">Advanced</span>
+                <span class="mode-description">Adds punctuation and case.</span>
+              </button>
+              <button class="mode-option" type="button" data-default-typing-mode="expert">
+                <span class="mode-label">Expert</span>
+                <span class="mode-description">Adds symbols and numbers.</span>
+              </button>
             </div>
           </section>
           <div class="settings-actions">
