@@ -11,7 +11,7 @@ To do, ordered by impact (highest first):
   - `Esc` pauses. Show Resume and Restart only — no "Exit to Menu" until there is a meaningful menu state to return to.
   - Practice sessions get interrupted by every notification and tab switch; without pause the run is just lost.
 
-- [ ] Add a mute toggle.
+- [x] Add a mute toggle.
   - Single binary toggle, persisted to `localStorage`. Volume slider is overkill for ~5 sounds and unused in serious typing apps.
   - Reachable from the start screen and the pause menu.
 

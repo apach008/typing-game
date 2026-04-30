@@ -144,6 +144,13 @@
       margin: 16px 0;
     }
 
+    .menu-actions {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
     button {
       appearance: none;
       border: 1px solid #65739d;
@@ -174,6 +181,16 @@
       background: #2f8559;
       border-color: #7be39b;
       color: #f6ffe8;
+    }
+
+    .menu-actions .primary {
+      margin-top: 0;
+    }
+
+    .sound-toggle[aria-pressed="true"] {
+      background: #5f3148;
+      border-color: #ffd271;
+      color: #fff3c4;
     }
 
     #pauseScreen button {
@@ -403,7 +420,10 @@
               <div class="best-stat"><span>Score</span><strong id="bestScore">-</strong></div>
             </div>
           </section>
-          <button class="primary" id="startButton">Start Run</button>
+          <div class="menu-actions">
+            <button class="primary" id="startButton">Start Run</button>
+            <button class="sound-toggle" id="startMuteButton" type="button" aria-pressed="false">Sound On</button>
+          </div>
         </div>
       </div>
 
@@ -433,6 +453,7 @@
         <div class="menu">
           <h2>Paused</h2>
           <button class="primary" id="resumeButton">Resume</button>
+          <button class="sound-toggle" id="pauseMuteButton" type="button" aria-pressed="false">Sound On</button>
           <button id="restartButton">Restart</button>
         </div>
       </div>
@@ -474,7 +495,8 @@
         bestStreak: document.getElementById("bestStreak"),
         bestScore: document.getElementById("bestScore"),
         newBestBanner: document.getElementById("newBestBanner"),
-        gameOverText: document.getElementById("gameOverText")
+        gameOverText: document.getElementById("gameOverText"),
+        muteButtons: Array.from(document.querySelectorAll(".sound-toggle"))
       };
 
       const palettes = {
@@ -1034,6 +1056,7 @@
         hard: 0.85
       };
       const PERSONAL_BESTS_KEY = "typequest-personal-bests-v1";
+      const SOUND_MUTED_KEY = "typequest-sound-muted-v1";
       const PERSONAL_BEST_FIELDS = [
         { key: "netWpm", label: "Net WPM" },
         { key: "rawWpm", label: "Raw WPM" },
@@ -1043,6 +1066,7 @@
       ];
 
       let audioCtx;
+      let soundMuted = readSoundMuted();
       let state = makeState();
       let last = performance.now();
       let raf = 0;
@@ -1189,8 +1213,38 @@
         return improved;
       }
 
+      function readSoundMuted() {
+        try {
+          return window.localStorage.getItem(SOUND_MUTED_KEY) === "true";
+        } catch (error) {
+          return false;
+        }
+      }
+
+      function writeSoundMuted(muted) {
+        try {
+          window.localStorage.setItem(SOUND_MUTED_KEY, String(muted));
+        } catch (error) {
+          return false;
+        }
+        return true;
+      }
+
+      function updateMuteButtons() {
+        els.muteButtons.forEach(button => {
+          button.textContent = soundMuted ? "Sound Off" : "Sound On";
+          button.setAttribute("aria-pressed", String(soundMuted));
+        });
+      }
+
+      function toggleSoundMuted() {
+        soundMuted = !soundMuted;
+        writeSoundMuted(soundMuted);
+        updateMuteButtons();
+      }
+
       function beep(type) {
-        if (!audioCtx) return;
+        if (soundMuted || !audioCtx) return;
         const now = audioCtx.currentTime;
         const osc = audioCtx.createOscillator();
         const gain = audioCtx.createGain();
@@ -2548,8 +2602,10 @@
       document.getElementById("againButton").addEventListener("click", startGame);
       document.getElementById("resumeButton").addEventListener("click", resumeGame);
       document.getElementById("restartButton").addEventListener("click", startGame);
+      els.muteButtons.forEach(button => button.addEventListener("click", toggleSoundMuted));
       window.addEventListener("keydown", handleKey);
 
+      updateMuteButtons();
       updateHud();
       updatePersonalBestsDisplay();
       spawnEntity(650);
