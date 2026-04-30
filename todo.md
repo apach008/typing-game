@@ -15,7 +15,7 @@ To do, ordered by impact (highest first):
   - Single binary toggle, persisted to `localStorage`. Volume slider is overkill for ~5 sounds and unused in serious typing apps.
   - Reachable from the start screen and the pause menu.
 
-- [ ] Add lifetime typing stats.
+- [x] Add lifetime typing stats.
   - Cumulative words typed, total runs, total time on task.
   - Persistent letter-mistake heatmap that aggregates across runs (extends the existing per-run weakness tracker).
   - Gives players a real "am I improving?" signal, which the per-run breakdown alone cannot provide.

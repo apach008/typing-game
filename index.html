@@ -205,7 +205,8 @@
       padding: 12px;
     }
 
-    .best-panel h2 {
+    .best-panel h2,
+    .lifetime-panel h2 {
       margin: 0 0 10px;
       color: #ffe28b;
       font-size: 18px;
@@ -219,14 +220,36 @@
       gap: 6px;
     }
 
-    .best-stat {
+    .lifetime-panel {
+      margin: 16px 0;
+      border: 1px solid #404d70;
+      background: #10172a;
+      padding: 12px;
+    }
+
+    .lifetime-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 6px;
+    }
+
+    .letter-heatmap {
+      display: grid;
+      grid-template-columns: repeat(13, 1fr);
+      gap: 4px;
+      margin-top: 8px;
+    }
+
+    .best-stat,
+    .lifetime-stat {
       min-width: 0;
       background: #202942;
       border: 1px solid #34415f;
       padding: 8px;
     }
 
-    .best-stat span {
+    .best-stat span,
+    .lifetime-stat span {
       display: block;
       color: var(--muted);
       font-size: 10px;
@@ -234,12 +257,26 @@
       line-height: 1.1;
     }
 
-    .best-stat strong {
+    .best-stat strong,
+    .lifetime-stat strong {
       display: block;
       margin-top: 3px;
       font-size: 18px;
       line-height: 1;
       white-space: nowrap;
+    }
+
+    .heat-letter {
+      min-width: 0;
+      border: 1px solid #34415f;
+      background: #151d31;
+      color: #f7f2df;
+      padding: 5px 0;
+      font-size: 12px;
+      font-weight: 800;
+      line-height: 1;
+      text-align: center;
+      text-transform: uppercase;
     }
 
     .new-best-banner {
@@ -368,6 +405,7 @@
       .run-modes,
       .typing-modes,
       .best-grid,
+      .lifetime-grid,
       .final-grid {
         grid-template-columns: 1fr;
       }
@@ -419,6 +457,16 @@
               <div class="best-stat"><span>Streak</span><strong id="bestStreak">-</strong></div>
               <div class="best-stat"><span>Score</span><strong id="bestScore">-</strong></div>
             </div>
+          </section>
+          <section class="lifetime-panel" aria-labelledby="lifetimeStatsTitle">
+            <h2 id="lifetimeStatsTitle">Lifetime Stats</h2>
+            <div class="lifetime-grid">
+              <div class="lifetime-stat"><span>Runs</span><strong id="lifetimeRuns">0</strong></div>
+              <div class="lifetime-stat"><span>Words</span><strong id="lifetimeWords">0</strong></div>
+              <div class="lifetime-stat"><span>Time</span><strong id="lifetimeTime">0s</strong></div>
+              <div class="lifetime-stat"><span>Weak Letters</span><strong id="lifetimeWeakLetters">None</strong></div>
+            </div>
+            <div class="letter-heatmap" id="lifetimeHeatmap" aria-label="Lifetime letter mistake heatmap"></div>
           </section>
           <div class="menu-actions">
             <button class="primary" id="startButton">Start Run</button>
@@ -494,6 +542,11 @@
         bestAccuracy: document.getElementById("bestAccuracy"),
         bestStreak: document.getElementById("bestStreak"),
         bestScore: document.getElementById("bestScore"),
+        lifetimeRuns: document.getElementById("lifetimeRuns"),
+        lifetimeWords: document.getElementById("lifetimeWords"),
+        lifetimeTime: document.getElementById("lifetimeTime"),
+        lifetimeWeakLetters: document.getElementById("lifetimeWeakLetters"),
+        lifetimeHeatmap: document.getElementById("lifetimeHeatmap"),
         newBestBanner: document.getElementById("newBestBanner"),
         gameOverText: document.getElementById("gameOverText"),
         muteButtons: Array.from(document.querySelectorAll(".sound-toggle"))
@@ -1056,6 +1109,7 @@
         hard: 0.85
       };
       const PERSONAL_BESTS_KEY = "typequest-personal-bests-v1";
+      const LIFETIME_STATS_KEY = "typequest-lifetime-stats-v1";
       const SOUND_MUTED_KEY = "typequest-sound-muted-v1";
       const PERSONAL_BEST_FIELDS = [
         { key: "netWpm", label: "Net WPM" },
@@ -1064,6 +1118,7 @@
         { key: "streak", label: "Streak" },
         { key: "score", label: "Score" }
       ];
+      const LETTERS = "abcdefghijklmnopqrstuvwxyz".split("");
 
       let audioCtx;
       let soundMuted = readSoundMuted();
@@ -1102,6 +1157,7 @@
           adaptiveMisses: 0,
           letterMistakes: {},
           completedChars: 0,
+          completedWords: 0,
           streak: 0,
           bestStreak: 0,
           score: 0,
@@ -1144,6 +1200,15 @@
           accuracy: 0,
           streak: 0,
           score: 0
+        };
+      }
+
+      function emptyLifetimeStats() {
+        return {
+          runs: 0,
+          wordsTyped: 0,
+          secondsTyped: 0,
+          letterMistakes: {}
         };
       }
 
@@ -1211,6 +1276,91 @@
         }
 
         return improved;
+      }
+
+      function readLifetimeStats() {
+        try {
+          const stored = window.localStorage.getItem(LIFETIME_STATS_KEY);
+          const parsed = stored ? JSON.parse(stored) : {};
+          if (!parsed || typeof parsed !== "object") return emptyLifetimeStats();
+          return {
+            ...emptyLifetimeStats(),
+            ...parsed,
+            runs: Number.isFinite(parsed.runs) ? parsed.runs : 0,
+            wordsTyped: Number.isFinite(parsed.wordsTyped) ? parsed.wordsTyped : 0,
+            secondsTyped: Number.isFinite(parsed.secondsTyped) ? parsed.secondsTyped : 0,
+            letterMistakes: parsed.letterMistakes && typeof parsed.letterMistakes === "object" ? parsed.letterMistakes : {}
+          };
+        } catch (error) {
+          return emptyLifetimeStats();
+        }
+      }
+
+      function writeLifetimeStats(stats) {
+        try {
+          window.localStorage.setItem(LIFETIME_STATS_KEY, JSON.stringify(stats));
+        } catch (error) {
+          return false;
+        }
+        return true;
+      }
+
+      function topMistakeLetters(letterMistakes) {
+        return Object.entries(letterMistakes)
+          .filter(([letter, count]) => /^[a-z]$/.test(letter) && count > 0)
+          .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+          .slice(0, 3)
+          .map(([letter]) => letter);
+      }
+
+      function formatDuration(seconds) {
+        const totalSeconds = Math.max(0, Math.round(seconds));
+        if (totalSeconds < 60) return `${totalSeconds}s`;
+        const totalMinutes = Math.round(totalSeconds / 60);
+        if (totalMinutes < 60) return `${totalMinutes}m`;
+        const hours = Math.floor(totalMinutes / 60);
+        const minutes = totalMinutes % 60;
+        return minutes ? `${hours}h ${minutes}m` : `${hours}h`;
+      }
+
+      function renderLifetimeHeatmap(letterMistakes) {
+        const maxMistakes = Math.max(0, ...LETTERS.map(letter => letterMistakes[letter] || 0));
+        els.lifetimeHeatmap.innerHTML = LETTERS.map(letter => {
+          const mistakes = letterMistakes[letter] || 0;
+          const heat = maxMistakes ? Math.max(0.12, mistakes / maxMistakes) : 0;
+          const background = mistakes ? `rgba(255, 106, 97, ${Math.min(0.85, 0.18 + heat * 0.67).toFixed(2)})` : "#151d31";
+          const border = mistakes ? "rgba(255, 210, 113, 0.72)" : "#34415f";
+          return `<span class="heat-letter" title="${letter.toUpperCase()}: ${mistakes}" style="background: ${background}; border-color: ${border};">${letter}</span>`;
+        }).join("");
+      }
+
+      function updateLifetimeStatsDisplay() {
+        const stats = readLifetimeStats();
+        const weakLetters = topMistakeLetters(stats.letterMistakes);
+        els.lifetimeRuns.textContent = stats.runs;
+        els.lifetimeWords.textContent = stats.wordsTyped;
+        els.lifetimeTime.textContent = formatDuration(stats.secondsTyped);
+        els.lifetimeWeakLetters.textContent = weakLetters.length ? weakLetters.join(", ") : "None";
+        renderLifetimeHeatmap(stats.letterMistakes);
+      }
+
+      function recordLifetimeStats() {
+        const stats = readLifetimeStats();
+        const next = {
+          ...stats,
+          runs: stats.runs + 1,
+          wordsTyped: stats.wordsTyped + state.completedWords,
+          secondsTyped: stats.secondsTyped + state.elapsed,
+          letterMistakes: { ...stats.letterMistakes }
+        };
+
+        Object.entries(state.letterMistakes).forEach(([letter, count]) => {
+          if (!/^[a-z]$/.test(letter) || count <= 0) return;
+          next.letterMistakes[letter] = (next.letterMistakes[letter] || 0) + count;
+        });
+
+        writeLifetimeStats(next);
+        return next;
       }
 
       function readSoundMuted() {
@@ -1562,6 +1712,7 @@
         const finalMistypedKeys = currentMistypedKeys();
         const finalAverageReactionTime = currentAverageReactionTime();
         const finalWeakLetters = weakestLettersSummary();
+        recordLifetimeStats();
         const improvedBests = recordPersonalBests(state.difficulty, {
           netWpm: finalNetWpm,
           rawWpm: finalRawWpm,
@@ -1586,6 +1737,7 @@
         els.newBestBanner.hidden = !improvedBests.length;
         els.newBestBanner.textContent = improvedBests.length ? `New Best! ${improvedBests.join(", ")}` : "New Best!";
         updatePersonalBestsDisplay();
+        updateLifetimeStatsDisplay();
         els.pauseScreen.hidden = true;
         els.gameOverScreen.hidden = false;
         beep(won ? "level" : "hit");
@@ -1672,6 +1824,7 @@
         addHitEffect(target, target.category === "enemy" || target.type === "boss" ? "defeat" : "collect");
         state.reactionTargetKey = "";
         state.completedChars += target.word.length;
+        state.completedWords += target.words.length;
         state.streak += 1;
         state.bestStreak = Math.max(state.bestStreak, state.streak);
         state.adaptiveCompleted += 1;
@@ -1734,10 +1887,7 @@
       }
 
       function weakestLettersSummary() {
-        const weakest = Object.entries(state.letterMistakes)
-          .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
-          .slice(0, 3)
-          .map(([letter]) => letter);
+        const weakest = topMistakeLetters(state.letterMistakes);
         return weakest.length ? weakest.join(", ") : "None";
       }
 
@@ -2608,6 +2758,7 @@
       updateMuteButtons();
       updateHud();
       updatePersonalBestsDisplay();
+      updateLifetimeStatsDisplay();
       spawnEntity(650);
       spawnEntity(920);
       cancelAnimationFrame(raf);
