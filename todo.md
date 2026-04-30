@@ -35,7 +35,7 @@ To do, ordered by impact (highest first):
   - `commonWords.slice(-260)` is still the tail of english-1k — common-ish. Bring in a curated rarer pack (~500 words: rarer roots, longer compounds, sciencey vocab) and route Hard there.
   - Easy/Normal stay where they are; the difficulty curve currently leans almost entirely on speed/spawn rate, not familiarity.
 
-- [ ] Add a sentence / passage typing mode.
+- [x] Add a sentence / passage typing mode.
   - New run mode "Practice" that streams full sentences (literature, quotes, common phrases) as one long target instead of single words.
   - Disables threats, focuses purely on sustained typing — pairs with the runner mode rather than replacing it.
   - Most typing trainers have this for a reason: real prose has rhythm and capitalization patterns that single-word drills don't reproduce.

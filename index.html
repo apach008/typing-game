@@ -152,6 +152,10 @@
       margin: 16px 0;
     }
 
+    .run-modes {
+      grid-template-columns: repeat(4, 1fr);
+    }
+
     .menu-actions {
       display: grid;
       grid-template-columns: 1fr;
@@ -640,6 +644,18 @@
       pointer-events: none;
     }
 
+    .typebar.practice {
+      width: min(860px, calc(100% - 28px));
+      min-height: 88px;
+      padding: 12px 16px;
+      place-items: center start;
+      font-size: clamp(16px, 2.4vw, 24px);
+      line-height: 1.35;
+      text-align: left;
+      text-shadow: 2px 2px 0 #422843;
+      white-space: normal;
+    }
+
     .typed {
       color: #7cf4a1;
     }
@@ -746,6 +762,7 @@
             <button class="active" data-run-mode="endless">Endless</button>
             <button data-run-mode="adventure">Adventure</button>
             <button data-run-mode="daily">Daily</button>
+            <button data-run-mode="practice">Practice</button>
           </div>
           <section class="daily-panel" id="dailyPanel" aria-labelledby="dailyTitle" hidden>
             <h2 id="dailyTitle">Today's Daily</h2>
@@ -1022,8 +1039,22 @@
       const runModes = {
         endless: { label: "Endless", timed: false, maxLevel: 9, finalBossLevel: null, daily: false },
         adventure: { label: "Adventure", timed: true, maxLevel: 5, finalBossLevel: 5, daily: false },
-        daily: { label: "Daily", timed: true, maxLevel: 9, finalBossLevel: null, daily: true }
+        daily: { label: "Daily", timed: true, maxLevel: 9, finalBossLevel: null, daily: true },
+        practice: { label: "Practice", timed: false, maxLevel: 1, finalBossLevel: null, daily: false, practice: true }
       };
+
+      const practicePassages = [
+        "The quiet road bends past the mill, where morning light gathers on the river stones.",
+        "Every careful sentence gives your hands a chance to learn rhythm, spacing, and control.",
+        "When the storm finally broke, Mira closed the old map and listened to the rain on the roof.",
+        "A practiced typist does not chase each letter; they read ahead and let the phrase arrive.",
+        "In the workshop, copper tools hung above the bench beside jars of screws and bright thread.",
+        "Small corrections matter because speed without accuracy only teaches the wrong motion faster.",
+        "The lanterns along the harbor flickered as the last train crossed the iron bridge.",
+        "Real prose asks for commas, capitals, pauses, and turns that single-word drills rarely provide.",
+        "Jonah kept a steady pace through the final paragraph, even as the clock on the wall ticked louder.",
+        "Clear thoughts become clear sentences when each word has room to land."
+      ];
 
       const commonWords = [
         "the", "of", "to", "and", "a", "in", "is", "it", "you", "that",
@@ -2337,6 +2368,44 @@
         return formatWordForTypingMode(eligibleWords[Math.floor(random() * eligibleWords.length)]);
       }
 
+      function isPracticeMode() {
+        return Boolean(runModes[state.runMode].practice);
+      }
+
+      function passageWordCount(passage) {
+        return passage.trim().split(/\s+/).filter(Boolean).length;
+      }
+
+      function pickPracticePassage() {
+        return practicePassages[Math.floor(random() * practicePassages.length)];
+      }
+
+      function spawnPracticePassage() {
+        const passage = pickPracticePassage();
+        state.entities = [{
+          id: state.nextEntityId++,
+          x: 440,
+          y: 392,
+          w: 80,
+          h: 76,
+          type: "practice",
+          category: "practice",
+          word: passage,
+          words: [passage],
+          wordIndex: 0,
+          optional: false,
+          powerup: null,
+          scoreScale: 1,
+          wordCredit: passageWordCount(passage),
+          done: false,
+          pop: 0
+        }];
+        state.boss = null;
+        state.typed = "";
+        state.reactionTargetKey = "";
+        clearTypoRecovery();
+      }
+
       function formatWordForTypingMode(word) {
         const mode = typingModes[state.typingMode] || typingModes.beginner;
         if (state.typingMode === "beginner") return word.toLowerCase();
@@ -2601,8 +2670,12 @@
         els.settingsScreen.hidden = true;
         els.gameOverScreen.hidden = true;
         els.pauseScreen.hidden = true;
-        spawnEntity(660);
-        spawnEntity(930);
+        if (isPracticeMode()) {
+          spawnPracticePassage();
+        } else {
+          spawnEntity(660);
+          spawnEntity(930);
+        }
         updateHud();
       }
 
@@ -2796,6 +2869,14 @@
         state.adaptiveMisses = Math.max(0, state.adaptiveMisses - 1);
         state.typed = "";
         clearTypoRecovery();
+        if (target.type === "practice") {
+          state.completedWords += Math.max(0, (target.wordCredit || 1) - target.words.length);
+          state.score += Math.round((target.word.length * 6 + state.streak * 8) * comboMultiplier());
+          applyComboMilestones();
+          beep("complete");
+          spawnPracticePassage();
+          return;
+        }
         state.action = target.category === "enemy" || target.type === "flying" || target.type === "shielded" ? "attack" : "jump";
         state.actionClock = 0.45;
         beep("complete");
@@ -3141,6 +3222,7 @@
         els.level.textContent = state.level;
         els.hearts.textContent = `${Math.max(0, state.hearts)}/${STARTING_HEARTS}`;
         els.powerup.textContent = activePowerupLabel();
+        els.typebar.classList.toggle("practice", isPracticeMode());
 
         if (state.mode === "playing" && state.countdown > 0) {
           els.typebar.textContent = `Get ready... ${Math.ceil(state.countdown)}`;
@@ -3213,6 +3295,11 @@
         state.screenShake = Math.max(0, state.screenShake - dt);
         updateEffects(dt);
         if (state.actionClock <= 0) state.action = "run";
+        if (isPracticeMode()) {
+          if (!currentTarget()) spawnPracticePassage();
+          updateHud();
+          return;
+        }
 
         if (!state.boss && state.spawnClock >= state.nextSpawn) {
           state.spawnClock = 0;
@@ -3546,6 +3633,7 @@
       }
 
       function drawEntity(entity, t) {
+        if (entity.type === "practice") return;
         if (entity.done) {
           ctx.globalAlpha = Math.max(0, entity.pop / 0.35);
           pixelRect(entity.x - 8, entity.y - 52, 72, 22, entity.optional ? "#8ff0ff" : "#f5c452");
@@ -3650,7 +3738,7 @@
         const placed = [];
         const layouts = new Map();
         const visible = entities
-          .filter(entity => !entity.done || entity.pop > 0)
+          .filter(entity => entity.type !== "practice" && (!entity.done || entity.pop > 0))
           .slice()
           .sort((a, b) => (a === target ? -1 : b === target ? 1 : a.x - b.x));
 
