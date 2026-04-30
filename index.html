@@ -3130,6 +3130,7 @@
         state.timeLeft = selectedRunDuration();
         updateDifficultyButtons();
         updatePersonalBestsDisplay();
+        updateDailyDisplay();
         updateHud();
       }
 
@@ -3180,28 +3181,44 @@
         updateMuteButtons();
       }
 
+      function ensureAudioContext() {
+        if (audioCtx) return audioCtx;
+        const AudioContextCtor = window.AudioContext || window.webkitAudioContext;
+        if (!AudioContextCtor) return null;
+        try {
+          audioCtx = new AudioContextCtor();
+        } catch (error) {
+          audioCtx = null;
+        }
+        return audioCtx;
+      }
+
       function beep(type) {
         if (soundMuted || !audioCtx) return;
         if (type === "key" && keypressSoundTheme === "none") return;
-        const now = audioCtx.currentTime;
-        const osc = audioCtx.createOscillator();
-        const gain = audioCtx.createGain();
-        const keySettings = {
-          mechanical: [660, 0.035, "square", 0.035],
-          soft: [520, 0.045, "sine", 0.022]
-        };
-        const settings = {
-          key: keySettings[keypressSoundTheme] || keySettings.mechanical,
-          complete: [880, 0.09, "triangle", 0.06],
-          error: [150, 0.08, "sawtooth", 0.055]
-        }[type] || [330, 0.08, "square", 0.04];
-        osc.frequency.setValueAtTime(settings[0], now);
-        osc.type = settings[2];
-        gain.gain.setValueAtTime(settings[3], now);
-        gain.gain.exponentialRampToValueAtTime(0.001, now + settings[1]);
-        osc.connect(gain).connect(audioCtx.destination);
-        osc.start(now);
-        osc.stop(now + settings[1]);
+        try {
+          const now = audioCtx.currentTime;
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          const keySettings = {
+            mechanical: [660, 0.035, "square", 0.035],
+            soft: [520, 0.045, "sine", 0.022]
+          };
+          const settings = {
+            key: keySettings[keypressSoundTheme] || keySettings.mechanical,
+            complete: [880, 0.09, "triangle", 0.06],
+            error: [150, 0.08, "sawtooth", 0.055]
+          }[type] || [330, 0.08, "square", 0.04];
+          osc.frequency.setValueAtTime(settings[0], now);
+          osc.type = settings[2];
+          gain.gain.setValueAtTime(settings[3], now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + settings[1]);
+          osc.connect(gain).connect(audioCtx.destination);
+          osc.start(now);
+          osc.stop(now + settings[1]);
+        } catch (error) {
+          audioCtx = null;
+        }
       }
 
       function pickWord() {
@@ -3586,7 +3603,7 @@
       }
 
       function startGame() {
-        audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+        ensureAudioContext();
         const selectedDifficulty = state.difficulty;
         const selectedRunMode = state.runMode;
         const selectedRunLength = state.runLength;
