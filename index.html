@@ -1571,7 +1571,6 @@
           letterMistakeTrigrams: {},
           samples: [],
           sampleClock: 0,
-          completedChars: 0,
           completedWords: 0,
           streak: 0,
           bestStreak: 0,
@@ -2493,7 +2492,6 @@
           triggerImpactCamera(0.14);
           target.wordIndex += 1;
           target.word = target.words[target.wordIndex];
-          state.completedChars += state.typed.length;
           state.typed = "";
           clearTypoRecovery();
           state.action = "attack";
@@ -2510,7 +2508,6 @@
         target.pop = 0.35;
         addHitEffect(target, target.category === "enemy" || target.type === "boss" ? "defeat" : "collect");
         state.reactionTargetKey = "";
-        state.completedChars += target.word.length;
         state.completedWords += target.words.length;
         state.streak += 1;
         state.bestStreak = Math.max(state.bestStreak, state.streak);
@@ -2725,9 +2722,8 @@
       }
 
       function currentNetWpm() {
-        const typoPenalty = state.totalTyped - state.correctTyped;
-        const completedWords = state.completedChars / 5;
-        return Math.max(0, Math.round((completedWords - typoPenalty) / runMinutes()));
+        const mistypedKeys = state.totalTyped - state.correctTyped;
+        return Math.max(0, Math.round(((state.correctTyped - mistypedKeys) / 5) / runMinutes()));
       }
 
       function currentAccuracy() {

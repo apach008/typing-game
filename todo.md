@@ -17,7 +17,7 @@ To do, ordered by impact (highest first):
   - Surface the top weak bigrams in lifetime stats and drill suggestions next to the letter list.
   - Most typing pain lives at the bigram level (th, ing, qu, ed); single-letter tracking misses it entirely.
 
-- [ ] Fix the Net WPM calculation to count in-progress correct keystrokes.
+- [x] Fix the Net WPM calculation to count in-progress correct keystrokes.
   - Current formula at `index.html:2620` only counts chars from *completed* targets — partial progress on a half-typed final word never scores.
   - Switch to `((correctTyped - mistypedKeys) / 5) / minutes` so the live HUD value reflects what the player is actually doing.
   - Validate against a 60s clean run vs a 60s run with deliberate typos to confirm the spread matches Monkeytype norms.
