@@ -1848,7 +1848,6 @@
           drawPixelSprite(animationFrame(spriteAnimations.obstacle, t, 4, entity.id), spritePalettes.obstacle, entity.x, entity.y - 40, 4);
           pixelRect(entity.x + 4, entity.y - 8, 28, 6, "#2f333d");
         }
-        drawWordBubble(entity);
       }
 
       function drawBossHealth() {
@@ -1883,10 +1882,7 @@
         ctx.textAlign = "center";
       }
 
-      function drawWordBubble(entity) {
-        ctx.font = "bold 22px Trebuchet MS, sans-serif";
-        ctx.textAlign = "center";
-        const isTarget = entity === currentTarget();
+      function bubbleText(entity, isTarget) {
         const progress = entity.words.length > 1 ? `${entity.wordIndex + 1}/${entity.words.length} ` : "";
         const powerupLabel = entity.powerup ? `${entity.powerup.label}: ` : "";
         const prefix = `${powerupLabel}${progress}`;
@@ -1894,13 +1890,82 @@
         const flashExpected = isTarget && state.expectedFlash > 0 && expectedLetter(entity);
         const expected = flashExpected ? entity.word[state.typed.length] : "";
         const pendingStart = isTarget ? state.typed.length + (flashExpected ? 1 : 0) : 0;
-        const pending = entity.word.slice(pendingStart);
-        const label = `${prefix}${entity.word}`;
-        const width = Math.max(74, ctx.measureText(label).width + 22);
-        const x = entity.x + entity.w / 2 - width / 2;
-        const y = entity.y - entity.h - 56;
+        return {
+          prefix,
+          typed,
+          flashExpected,
+          expected,
+          pending: entity.word.slice(pendingStart),
+          label: `${prefix}${entity.word}`
+        };
+      }
+
+      function buildWordBubbleLayouts(entities, target) {
+        ctx.font = "bold 22px Trebuchet MS, sans-serif";
+        const placed = [];
+        const layouts = new Map();
+        const visible = entities
+          .filter(entity => !entity.done || entity.pop > 0)
+          .slice()
+          .sort((a, b) => (a === target ? -1 : b === target ? 1 : a.x - b.x));
+
+        for (const entity of visible) {
+          const isTarget = entity === target;
+          const text = bubbleText(entity, isTarget);
+          const width = Math.max(74, ctx.measureText(text.label).width + 22);
+          const height = 34;
+          const margin = 8;
+          const desiredX = entity.x + entity.w / 2 - width / 2;
+          const x = Math.max(8, Math.min(canvas.width - width - 8, desiredX));
+          const baseY = entity.y - entity.h - (isTarget ? 56 : 70);
+          let y = Math.max(72, baseY);
+          const overlaps = rect => placed.some(other =>
+            rect.x < other.x + other.width + margin &&
+            rect.x + rect.width + margin > other.x &&
+            rect.y < other.y + other.height + margin &&
+            rect.y + rect.height + margin > other.y
+          );
+          let rect = { x, y, width, height };
+          while (overlaps(rect) && y > 72) {
+            y = Math.max(72, y - height - margin);
+            rect = { x, y, width, height };
+          }
+          if (overlaps(rect)) {
+            let shift = 0;
+            while (overlaps(rect) && shift < 6) {
+              const direction = shift % 2 === 0 ? 1 : -1;
+              const distance = Math.ceil((shift + 1) / 2) * 24;
+              rect.x = Math.max(8, Math.min(canvas.width - width - 8, x + direction * distance));
+              shift += 1;
+            }
+          }
+          placed.push(rect);
+          layouts.set(entity.id, { ...rect, isTarget, text, alpha: isTarget ? 1 : 0.76 });
+        }
+
+        return layouts;
+      }
+
+      function drawWordBubble(entity, layout) {
+        if (!layout) return;
+        const { x, y, width, isTarget, text, alpha } = layout;
+        const { prefix, typed, flashExpected, expected, pending } = text;
+        ctx.save();
+        ctx.globalAlpha = alpha;
         pixelRect(x, y, width, 34, "#111827");
         pixelRect(x + 3, y + 3, width - 6, 28, isTarget ? "#37476c" : entity.optional ? "#26485a" : "#253049");
+        if (isTarget) {
+          ctx.strokeStyle = "#ffe28b";
+          ctx.lineWidth = 3;
+          ctx.strokeRect(Math.round(x) + 1.5, Math.round(y) + 1.5, Math.round(width) - 3, 31);
+          ctx.fillStyle = "#ffe28b";
+          ctx.beginPath();
+          ctx.moveTo(entity.x + entity.w / 2, y + 40);
+          ctx.lineTo(entity.x + entity.w / 2 - 8, y + 32);
+          ctx.lineTo(entity.x + entity.w / 2 + 8, y + 32);
+          ctx.closePath();
+          ctx.fill();
+        }
         const pendingColor = entity.type === "powerup" ? "#d8ffd1" : entity.optional ? "#b9fbff" : "#ffe9a6";
         const expectedColor = Math.floor(performance.now() / 90) % 2 === 0 ? "#ffdf82" : "#ff6a61";
         drawCenteredSegments([
@@ -1908,7 +1973,8 @@
           { text: typed, color: "#7cf4a1" },
           { text: flashExpected ? displayLetter(expected) : "", color: expectedColor },
           { text: pending, color: pendingColor }
-        ], entity.x + entity.w / 2, y + 24);
+        ], x + width / 2, y + 24);
+        ctx.restore();
       }
 
       function draw() {
@@ -1919,9 +1985,12 @@
           ctx.translate(Math.round((Math.random() - 0.5) * shake), Math.round((Math.random() - 0.5) * shake));
         }
         drawBackground(t);
+        const target = currentTarget();
+        const bubbleLayouts = buildWordBubbleLayouts(state.entities, target);
         for (const entity of state.entities) drawEntity(entity, t);
         drawEffects();
         drawHero(t);
+        for (const entity of state.entities) drawWordBubble(entity, bubbleLayouts.get(entity.id));
         drawBossHealth();
         if (state.mode === "playing" && state.countdown > 0) {
           drawCountdown();

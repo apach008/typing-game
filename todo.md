@@ -128,7 +128,7 @@
   - Current background has some movement, but layers can be more distinct.
   - Add clouds, far mountains, mid-ground ruins, foreground grass, and torch lights.
 
-- [ ] Improve word bubble layout.
+- [x] Improve word bubble layout.
   - Prevent overlapping bubbles when entities are close.
   - Move secondary target bubbles higher or fade them slightly.
   - Add an arrow or outline to make the current target unmistakable.
