@@ -22,7 +22,7 @@
   - `speed` is currently computed before `level` updates in the frame.
   - Reorder the update so level changes affect the same frame consistently.
 
-- [ ] Remove unused state fields.
+- [x] Remove unused state fields.
   - `heroY` is currently unused.
   - Keep state small so future mechanics are easier to reason about.
 
