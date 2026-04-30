@@ -61,7 +61,7 @@ To do, ordered by impact (highest first):
   - Fixed timers per difficulty (105/95/85s) are the only options; expose 30s sprint, 60s standard, 120s endurance as a setting separate from difficulty.
   - Lets players pick a session size that matches their attention budget; 30s is the de-facto warmup norm in typing communities.
 
-- [ ] Smooth out theme transitions between levels.
+- [x] Smooth out theme transitions between levels.
   - Currently every level swap snaps to a new palette mid-frame.
   - Crossfade sky/ground colors over ~0.6s on level change; theme parameters are already centrally defined so a per-frame interpolation is straightforward.
 

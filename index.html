@@ -1986,6 +1986,7 @@
       const BOSS_SCORE_SCALE = 2.6;
       const BOSS_TIME_BONUS = 8;
       const ADVENTURE_CLEAR_BONUS = 1000;
+      const THEME_TRANSITION_DURATION = 0.6;
       const HERO_HIT_X = 154;
       const BASE_SPAWN_X = 1040;
       const TYPO_LOCK_SECONDS = 0.16;
@@ -2106,6 +2107,7 @@
           comboBurstLabel: "",
           level: 1,
           themeIndex: 0,
+          themeTransition: null,
           boss: null,
           defeatedBossLevels: [],
           adventureContinueLevel: 0,
@@ -3096,8 +3098,95 @@
         return entityKinds.obstacle;
       }
 
+      function clamp(value, min, max) {
+        return Math.min(max, Math.max(min, value));
+      }
+
+      function lerp(from, to, amount) {
+        return from + (to - from) * amount;
+      }
+
+      function parseThemeColor(color) {
+        if (color.startsWith("#")) {
+          const raw = color.slice(1);
+          const hex = raw.length === 3 ? raw.split("").map(ch => ch + ch).join("") : raw;
+          return {
+            r: parseInt(hex.slice(0, 2), 16),
+            g: parseInt(hex.slice(2, 4), 16),
+            b: parseInt(hex.slice(4, 6), 16),
+            a: 1
+          };
+        }
+        const match = color.match(/rgba?\(([^)]+)\)/);
+        if (!match) return { r: 255, g: 255, b: 255, a: 1 };
+        const parts = match[1].split(",").map(part => Number(part.trim()));
+        return {
+          r: parts[0] || 0,
+          g: parts[1] || 0,
+          b: parts[2] || 0,
+          a: parts.length > 3 ? parts[3] : 1
+        };
+      }
+
+      function blendThemeColor(fromColor, toColor, amount) {
+        const from = parseThemeColor(fromColor);
+        const to = parseThemeColor(toColor);
+        const r = Math.round(lerp(from.r, to.r, amount));
+        const g = Math.round(lerp(from.g, to.g, amount));
+        const b = Math.round(lerp(from.b, to.b, amount));
+        const a = lerp(from.a, to.a, amount);
+        return `rgba(${r}, ${g}, ${b}, ${a.toFixed(3)})`;
+      }
+
+      function blendThemeArray(fromArray, toArray, amount) {
+        return toArray.map((color, index) => blendThemeColor(fromArray[index] || color, color, amount));
+      }
+
+      function blendTheme(fromTheme, toTheme, amount) {
+        return {
+          ...toTheme,
+          sky: blendThemeArray(fromTheme.sky, toTheme.sky, amount),
+          sun: blendThemeColor(fromTheme.sun, toTheme.sun, amount),
+          far: blendThemeColor(fromTheme.far, toTheme.far, amount),
+          farTop: blendThemeColor(fromTheme.farTop, toTheme.farTop, amount),
+          mid: blendThemeColor(fromTheme.mid, toTheme.mid, amount),
+          midTop: blendThemeColor(fromTheme.midTop, toTheme.midTop, amount),
+          ground: blendThemeColor(fromTheme.ground, toTheme.ground, amount),
+          groundTrim: blendThemeColor(fromTheme.groundTrim, toTheme.groundTrim, amount),
+          shadow: blendThemeColor(fromTheme.shadow, toTheme.shadow, amount),
+          atmosphere: toTheme.atmosphere ? {
+            ...toTheme.atmosphere,
+            tint: fromTheme.atmosphere
+              ? blendThemeColor(fromTheme.atmosphere.tint, toTheme.atmosphere.tint, amount)
+              : toTheme.atmosphere.tint
+          } : null
+        };
+      }
+
       function currentTheme() {
-        return levelThemes[Math.min(state.themeIndex, levelThemes.length - 1)];
+        const targetTheme = levelThemes[Math.min(state.themeIndex, levelThemes.length - 1)];
+        const transition = state.themeTransition;
+        if (!transition || transition.toIndex !== state.themeIndex) return targetTheme;
+        const fromTheme = levelThemes[Math.min(transition.fromIndex, levelThemes.length - 1)];
+        const amount = clamp(transition.elapsed / transition.duration, 0, 1);
+        return blendTheme(fromTheme, targetTheme, amount);
+      }
+
+      function startThemeTransition(fromIndex, toIndex) {
+        state.themeTransition = {
+          fromIndex,
+          toIndex,
+          elapsed: 0,
+          duration: THEME_TRANSITION_DURATION
+        };
+      }
+
+      function updateThemeTransition(dt) {
+        if (!state.themeTransition) return;
+        state.themeTransition.elapsed += dt;
+        if (state.themeTransition.elapsed >= state.themeTransition.duration) {
+          state.themeTransition = null;
+        }
       }
 
       function currentSpeed() {
@@ -3401,6 +3490,7 @@
         state.actionClock = 0;
         state.hurtClock = 0;
         state.screenShake = 0;
+        state.themeTransition = null;
         state.comboBurst = 0;
         state.comboBurstLabel = "";
         state.powerups = {
@@ -4020,6 +4110,7 @@
         dt *= cameraTimeScale();
         const cfg = palettes[state.difficulty];
         state.elapsed += dt;
+        updateThemeTransition(dt);
         if (runModes[state.runMode].timed) state.timeLeft -= dt;
         state.sampleClock += dt;
         while (state.sampleClock >= 1) {
@@ -4030,6 +4121,7 @@
         state.level = targetLevel();
         state.themeIndex = Math.min(levelThemes.length - 1, state.level - 1);
         if (state.themeIndex !== previousTheme) {
+          startThemeTransition(previousTheme, state.themeIndex);
           triggerComboBurst(currentTheme().label, 1.05);
         }
         const speed = currentSpeed();
