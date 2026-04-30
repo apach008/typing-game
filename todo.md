@@ -124,7 +124,7 @@
   - Screen shake on damage.
   - Pixel particles on successful words.
 
-- [ ] Add parallax depth.
+- [x] Add parallax depth.
   - Current background has some movement, but layers can be more distinct.
   - Add clouds, far mountains, mid-ground ruins, foreground grass, and torch lights.
 
