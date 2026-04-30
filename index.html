@@ -161,6 +161,16 @@
       grid-template-columns: repeat(3, 1fr);
     }
 
+    .run-length-status {
+      margin: 16px 0;
+      border: 1px solid #65739d;
+      background: rgba(24, 31, 52, 0.82);
+      color: #fff3c4;
+      font-weight: 700;
+      padding: 12px 10px;
+      text-align: center;
+    }
+
     .menu-actions {
       display: grid;
       grid-template-columns: 1fr;
@@ -1174,7 +1184,8 @@
               <span class="difficulty-description">Longer, rarer words, dense threats, strict pacing.</span>
             </button>
           </div>
-          <div class="run-lengths" role="group" aria-label="Run length">
+          <div class="run-length-status" id="runLengthStatus" hidden></div>
+          <div class="run-lengths" id="runLengthOptions" role="group" aria-label="Run length">
             <button data-run-length="30">
               <span class="run-length-label">30s Sprint</span>
               <span class="run-length-description">Fast warmup run.</span>
@@ -1487,6 +1498,8 @@
         dailyStreak: document.getElementById("dailyStreak"),
         dailyShareButton: document.getElementById("dailyShareButton"),
         dailyShareStatus: document.getElementById("dailyShareStatus"),
+        runLengthStatus: document.getElementById("runLengthStatus"),
+        runLengthOptions: document.getElementById("runLengthOptions"),
         newBestBanner: document.getElementById("newBestBanner"),
         gameOverText: document.getElementById("gameOverText"),
         startSettingsButton: document.getElementById("startSettingsButton"),
@@ -2307,15 +2320,31 @@
         return true;
       }
 
-      function personalBestKey(difficulty, runLength = state.runLength) {
-        return `${difficulty}-${normalizeRunLength(runLength)}`;
+      function isTimedRunMode(mode = state.runMode) {
+        return Boolean(runModes[mode] && runModes[mode].timed);
       }
 
-      function personalBestForDifficulty(difficulty, runLength = state.runLength) {
+      function runDurationLabel(mode = state.runMode, runLength = state.runLength) {
+        return isTimedRunMode(mode) ? `${normalizeRunLength(runLength)}s` : "Untimed";
+      }
+
+      function runContextLabel(mode = state.runMode, difficulty = state.difficulty, runLength = state.runLength) {
+        const parts = [difficultyLabel(difficulty), runModes[mode].label];
+        if (isTimedRunMode(mode)) parts.push(runDurationLabel(mode, runLength));
+        return parts.join(" ");
+      }
+
+      function personalBestKey(mode = state.runMode, difficulty = state.difficulty, runLength = state.runLength) {
+        return isTimedRunMode(mode)
+          ? `${mode}-${difficulty}-${normalizeRunLength(runLength)}`
+          : `${mode}-${difficulty}-untimed`;
+      }
+
+      function personalBestForContext(mode = state.runMode, difficulty = state.difficulty, runLength = state.runLength) {
         const bests = readPersonalBests();
         return {
           ...emptyPersonalBest(),
-          ...(bests[personalBestKey(difficulty, runLength)] || {})
+          ...(bests[personalBestKey(mode, difficulty, runLength)] || {})
         };
       }
 
@@ -2329,8 +2358,8 @@
       }
 
       function updatePersonalBestsDisplay() {
-        const best = personalBestForDifficulty(state.difficulty);
-        els.personalBestsTitle.textContent = `${difficultyLabel(state.difficulty)} ${state.runLength}s Personal Bests`;
+        const best = personalBestForContext();
+        els.personalBestsTitle.textContent = `${runContextLabel()} Personal Bests`;
         els.bestNetWpm.textContent = formatBestValue("netWpm", best.netWpm);
         els.bestRawWpm.textContent = formatBestValue("rawWpm", best.rawWpm);
         els.bestAccuracy.textContent = formatBestValue("accuracy", best.accuracy);
@@ -2338,9 +2367,9 @@
         els.bestScore.textContent = formatBestValue("score", best.score);
       }
 
-      function recordPersonalBests(difficulty, result, runLength = state.runLength) {
+      function recordPersonalBests(mode, difficulty, result, runLength = state.runLength) {
         const bests = readPersonalBests();
-        const key = personalBestKey(difficulty, runLength);
+        const key = personalBestKey(mode, difficulty, runLength);
         const previous = { ...emptyPersonalBest(), ...(bests[key] || {}) };
         const next = { ...previous };
         const improved = [];
@@ -2360,8 +2389,8 @@
         return improved;
       }
 
-      function hasExistingPersonalBest(difficulty, runLength = state.runLength) {
-        const best = personalBestForDifficulty(difficulty, runLength);
+      function hasExistingPersonalBest(mode, difficulty, runLength = state.runLength) {
+        const best = personalBestForContext(mode, difficulty, runLength);
         return PERSONAL_BEST_FIELDS.some(field => best[field.key] > 0);
       }
 
@@ -2596,7 +2625,7 @@
         els.recentRunList.innerHTML = runs.map(run => `
           <li class="recent-run">
             <span class="recent-run-date">${escapeHtml(formatRunDate(run.date))}</span>
-            <span class="recent-run-mode">${escapeHtml(runModes[run.mode].label)} / ${escapeHtml(difficultyLabel(run.difficulty))} / ${run.runLength}s</span>
+            <span class="recent-run-mode">${escapeHtml(runModes[run.mode].label)} / ${escapeHtml(difficultyLabel(run.difficulty))} / ${escapeHtml(runDurationLabel(run.mode, run.runLength))}</span>
             <span class="recent-run-metric">${run.netWpm} WPM</span>
             <span class="recent-run-metric">${run.accuracy}%</span>
             <span class="recent-run-metric">${run.streak} streak</span>
@@ -3044,8 +3073,24 @@
       }
 
       function updateRunLengthButtons() {
+        const timed = isTimedRunMode();
+        if (els.runLengthOptions) els.runLengthOptions.hidden = !timed;
+        if (els.runLengthStatus) {
+          els.runLengthStatus.hidden = timed;
+          els.runLengthStatus.textContent = isPracticeMode()
+            ? "Practice is untimed."
+            : `${runModes[state.runMode].label} is untimed.`;
+        }
         document.querySelectorAll("[data-run-length]").forEach(button => {
           const isActive = normalizeRunLength(button.dataset.runLength) === state.runLength;
+          button.classList.toggle("active", isActive);
+          button.setAttribute("aria-pressed", String(isActive));
+        });
+      }
+
+      function updateRunModeButtons() {
+        document.querySelectorAll("[data-run-mode]").forEach(button => {
+          const isActive = button.dataset.runMode === state.runMode;
           button.classList.toggle("active", isActive);
           button.setAttribute("aria-pressed", String(isActive));
         });
@@ -3696,8 +3741,8 @@
           accuracy: finalAccuracy,
           streak: state.bestStreak
         });
-        const hadPersonalBest = hasExistingPersonalBest(state.difficulty);
-        const improvedBests = recordPersonalBests(state.difficulty, {
+        const hadPersonalBest = hasExistingPersonalBest(state.runMode, state.difficulty);
+        const improvedBests = recordPersonalBests(state.runMode, state.difficulty, {
           netWpm: finalNetWpm,
           rawWpm: finalRawWpm,
           accuracy: finalAccuracy,
@@ -4915,10 +4960,11 @@
 
       document.querySelectorAll("[data-run-mode]").forEach(button => {
         button.addEventListener("click", () => {
-          document.querySelectorAll("[data-run-mode]").forEach(b => b.classList.remove("active"));
-          button.classList.add("active");
           state.runMode = button.dataset.runMode;
           state.timeLeft = selectedRunDuration();
+          updateRunModeButtons();
+          updateRunLengthButtons();
+          updatePersonalBestsDisplay();
           updateHud();
           updateDailyDisplay();
         });
@@ -4982,6 +5028,7 @@
 
       updateMuteButtons();
       updateKeypressSoundThemeButtons();
+      updateRunModeButtons();
       updateDifficultyButtons();
       updateRunLengthButtons();
       updateTypingModeButtons();
