@@ -85,7 +85,7 @@
   - Advanced: mixed case, punctuation, short phrases.
   - Expert: symbols and numbers.
 
-- [ ] Add adaptive difficulty.
+- [x] Add adaptive difficulty.
   - Increase word length and spawn pressure when accuracy is high.
   - Ease pressure if accuracy drops below a threshold.
   - Keep manual difficulty levels, but let them tune the adaptive range.

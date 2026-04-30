@@ -354,9 +354,9 @@
       };
 
       const palettes = {
-        easy: { speed: 205, speedLevel: 7, spawn: 1.55, spawnLevel: 0.035, spawnMin: 1.05, time: 105, wordMin: 3, wordMax: 5 },
-        normal: { speed: 275, speedLevel: 9, spawn: 1.2, spawnLevel: 0.045, spawnMin: 0.9, time: 95, wordMin: 4, wordMax: 7 },
-        hard: { speed: 345, speedLevel: 11, spawn: 0.95, spawnLevel: 0.05, spawnMin: 0.78, time: 85, wordMin: 5, wordMax: 8 }
+        easy: { speed: 205, speedLevel: 7, spawn: 1.55, spawnLevel: 0.035, spawnMin: 1.05, time: 105, wordMin: 3, wordMax: 5, adaptiveRange: 0.7, adaptiveSpeed: 0.08, adaptiveSpawn: 0.14, adaptiveWord: 1 },
+        normal: { speed: 275, speedLevel: 9, spawn: 1.2, spawnLevel: 0.045, spawnMin: 0.9, time: 95, wordMin: 4, wordMax: 7, adaptiveRange: 1, adaptiveSpeed: 0.12, adaptiveSpawn: 0.18, adaptiveWord: 2 },
+        hard: { speed: 345, speedLevel: 11, spawn: 0.95, spawnLevel: 0.05, spawnMin: 0.78, time: 85, wordMin: 5, wordMax: 8, adaptiveRange: 1.25, adaptiveSpeed: 0.15, adaptiveSpawn: 0.22, adaptiveWord: 2 }
       };
 
       const runModes = {
@@ -511,6 +511,11 @@
       const BASE_SPAWN_X = 1040;
       const TYPO_LOCK_SECONDS = 0.16;
       const TYPO_FLASH_SECONDS = 0.42;
+      const ADAPTIVE_MIN_KEYSTROKES = 12;
+      const ADAPTIVE_HIGH_ACCURACY = 94;
+      const ADAPTIVE_LOW_ACCURACY = 82;
+      const ADAPTIVE_STREAK_BOOST = 10;
+      const ADAPTIVE_RECOVERY_WINDOW = 5;
       const DIFFICULTY_REACTION_BUFFER = {
         easy: 1.2,
         normal: 1.0,
@@ -542,6 +547,10 @@
           expectedFlash: 0,
           totalTyped: 0,
           correctTyped: 0,
+          adaptiveTyped: 0,
+          adaptiveCorrect: 0,
+          adaptiveCompleted: 0,
+          adaptiveMisses: 0,
           completedChars: 0,
           streak: 0,
           bestStreak: 0,
@@ -590,12 +599,12 @@
       }
 
       function pickWord(category) {
-        const cfg = palettes[state.difficulty];
+        const range = adaptiveWordRange();
         const words = wordCategories[category] || wordCategories.obstacle;
         if (category === "boss") {
           return formatWordForTypingMode(words[Math.floor(random() * words.length)]);
         }
-        const pool = words.filter(word => word.length >= cfg.wordMin && word.length <= cfg.wordMax);
+        const pool = words.filter(word => word.length >= range.min && word.length <= range.max);
         const eligibleWords = pool.length ? pool : words;
         return formatWordForTypingMode(eligibleWords[Math.floor(random() * eligibleWords.length)]);
       }
@@ -639,7 +648,37 @@
       function currentSpeed() {
         const cfg = palettes[state.difficulty];
         const focusFactor = state.powerups.focus > 0 ? 0.62 : 1;
-        return (cfg.speed + state.level * cfg.speedLevel) * warmupSpeedFactor() * focusFactor;
+        const adaptiveFactor = 1 + adaptivePressure() * cfg.adaptiveSpeed;
+        return (cfg.speed + state.level * cfg.speedLevel) * adaptiveFactor * warmupSpeedFactor() * focusFactor;
+      }
+
+      function adaptivePressure() {
+        const cfg = palettes[state.difficulty];
+        if (state.elapsed < WARMUP_SECONDS || state.adaptiveTyped < ADAPTIVE_MIN_KEYSTROKES) return 0;
+
+        const accuracy = (state.adaptiveCorrect / state.adaptiveTyped) * 100;
+        let pressure = 0;
+        if (accuracy >= ADAPTIVE_HIGH_ACCURACY) {
+          pressure += (accuracy - ADAPTIVE_HIGH_ACCURACY) / (100 - ADAPTIVE_HIGH_ACCURACY);
+        } else if (accuracy < ADAPTIVE_LOW_ACCURACY) {
+          pressure -= (ADAPTIVE_LOW_ACCURACY - accuracy) / ADAPTIVE_LOW_ACCURACY;
+        }
+        pressure += Math.min(0.55, state.streak / ADAPTIVE_STREAK_BOOST) * 0.45;
+        pressure += Math.min(0.25, state.adaptiveCompleted * 0.015);
+        pressure -= Math.min(0.85, state.adaptiveMisses / ADAPTIVE_RECOVERY_WINDOW);
+
+        return Math.max(-1, Math.min(1, pressure * cfg.adaptiveRange));
+      }
+
+      function adaptiveWordRange() {
+        const cfg = palettes[state.difficulty];
+        const pressure = adaptivePressure();
+        const harderWords = Math.max(0, Math.round(pressure * cfg.adaptiveWord));
+        const easierWords = Math.max(0, Math.round(-pressure * cfg.adaptiveWord));
+        return {
+          min: Math.max(3, cfg.wordMin - easierWords),
+          max: Math.max(cfg.wordMin, cfg.wordMax + harderWords - easierWords)
+        };
       }
 
       function warmupProgress() {
@@ -652,6 +691,11 @@
 
       function warmupSpawnFactor() {
         return WARMUP_START_SPAWN_FACTOR - (WARMUP_START_SPAWN_FACTOR - 1) * warmupProgress();
+      }
+
+      function adaptiveSpawnFactor() {
+        const cfg = palettes[state.difficulty];
+        return 1 - adaptivePressure() * cfg.adaptiveSpawn;
       }
 
       function spacingForWord(word, speed, timingScale = 1) {
@@ -873,6 +917,8 @@
         state.completedChars += target.word.length;
         state.streak += 1;
         state.bestStreak = Math.max(state.bestStreak, state.streak);
+        state.adaptiveCompleted += 1;
+        state.adaptiveMisses = Math.max(0, state.adaptiveMisses - 1);
         state.typed = "";
         clearTypoRecovery();
         state.action = target.category === "enemy" || target.type === "flying" || target.type === "shielded" ? "attack" : "jump";
@@ -963,6 +1009,7 @@
         }
         state.hearts -= 1;
         state.streak = 0;
+        state.adaptiveMisses += 1;
         state.typed = "";
         clearTypoRecovery();
         state.action = "hurt";
@@ -998,9 +1045,11 @@
 
         const key = event.key;
         state.totalTyped += 1;
+        state.adaptiveTyped += 1;
         if (key === " ") event.preventDefault();
         if (target && target.word[state.typed.length] === key) {
           state.correctTyped += 1;
+          state.adaptiveCorrect += 1;
           state.typed += key;
           clearTypoRecovery();
           beep("key");
@@ -1096,7 +1145,7 @@
           state.spawnClock = 0;
           const theme = currentTheme();
           const baseSpawn = Math.max(cfg.spawnMin, cfg.spawn - state.level * cfg.spawnLevel + random() * 0.45);
-          state.nextSpawn = baseSpawn * warmupSpawnFactor() * (theme.spawnScale || 1);
+          state.nextSpawn = Math.max(cfg.spawnMin * 0.82, baseSpawn * adaptiveSpawnFactor() * warmupSpawnFactor() * (theme.spawnScale || 1));
           spawnEntity();
         }
 
