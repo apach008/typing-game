@@ -347,6 +347,10 @@
         powerup: [
           "chrono", "focus", "shield", "magnet", "aegis", "tempo", "spark", "charge",
           "second", "clarity", "guard", "attract", "safety", "boost"
+        ],
+        boss: [
+          "break guard", "storm blade", "hold fast", "strike true", "dodge fire",
+          "shatter helm", "rally now", "final blow", "steel focus", "drive back"
         ]
       };
 
@@ -380,6 +384,10 @@
       const COMBO_FRENZY_STEP = 25;
       const COMBO_FRENZY_DURATION = 8;
       const COMBO_FRENZY_MULTIPLIER = 2;
+      const BOSS_LEVEL_INTERVAL = 3;
+      const BOSS_WORDS_PER_LEVEL = 2;
+      const BOSS_SCORE_SCALE = 2.6;
+      const BOSS_TIME_BONUS = 8;
       const HERO_HIT_X = 154;
       const BASE_SPAWN_X = 1040;
       const DIFFICULTY_REACTION_BUFFER = {
@@ -424,6 +432,8 @@
           comboBurstDuration: 1,
           comboBurstLabel: "",
           level: 1,
+          boss: null,
+          defeatedBossLevels: [],
           action: "run",
           actionClock: 0,
           hurtClock: 0
@@ -454,6 +464,9 @@
       function pickWord(category) {
         const cfg = palettes[state.difficulty];
         const words = wordCategories[category] || wordCategories.obstacle;
+        if (category === "boss") {
+          return words[Math.floor(Math.random() * words.length)];
+        }
         const pool = words.filter(word => word.length >= cfg.wordMin && word.length <= cfg.wordMax);
         const eligibleWords = pool.length ? pool : words;
         return eligibleWords[Math.floor(Math.random() * eligibleWords.length)];
@@ -525,6 +538,37 @@
           done: false,
           pop: 0
         });
+      }
+
+      function startBossEncounter(level) {
+        const wordCount = BOSS_WORDS_PER_LEVEL + Math.floor(level / BOSS_LEVEL_INTERVAL);
+        const words = Array.from({ length: wordCount }, () => pickWord("boss"));
+        const boss = {
+          x: 680,
+          y: 392,
+          w: 122,
+          h: 126,
+          type: "boss",
+          category: "enemy",
+          word: words[0],
+          words,
+          wordIndex: 0,
+          optional: false,
+          powerup: null,
+          scoreScale: BOSS_SCORE_SCALE,
+          done: false,
+          pop: 0,
+          maxHealth: words.length,
+          attackClock: 4.5,
+          attackDuration: 4.5,
+          level
+        };
+        state.entities = [boss];
+        state.boss = boss;
+        state.spawnClock = 0;
+        state.typed = "";
+        triggerComboBurst(`Level ${level} boss`, 1.4);
+        beep("level");
       }
 
       function applyPowerup(powerup) {
@@ -613,6 +657,7 @@
       }
 
       function currentTarget() {
+        if (state.boss && !state.boss.done) return state.boss;
         return state.entities.filter(e => !e.done).sort((a, b) => a.x - b.x)[0];
       }
 
@@ -624,6 +669,9 @@
           state.typed = "";
           state.action = "attack";
           state.actionClock = 0.28;
+          if (target.type === "boss") {
+            target.attackClock = Math.min(target.attackDuration, target.attackClock + 1.2);
+          }
           beep("complete");
           return;
         }
@@ -636,6 +684,13 @@
         state.typed = "";
         state.action = target.category === "enemy" || target.type === "flying" || target.type === "shielded" ? "attack" : "jump";
         state.actionClock = 0.45;
+        if (target.type === "boss") {
+          state.boss = null;
+          state.defeatedBossLevels.push(target.level);
+          state.timeLeft += BOSS_TIME_BONUS;
+          triggerComboBurst(`Boss defeated +${BOSS_TIME_BONUS}s`, 1.4);
+          beep("level");
+        }
         if (target.type === "powerup") {
           applyPowerup(target.powerup);
           state.action = "jump";
@@ -670,6 +725,9 @@
       }
 
       function missTarget(target) {
+        if (target.type === "boss") {
+          target.attackClock = target.attackDuration;
+        }
         target.done = true;
         target.pop = 0;
         if (target.optional) {
@@ -702,11 +760,12 @@
           event.preventDefault();
           return;
         }
-        if (event.key.length !== 1 || !/[a-z]/i.test(event.key)) return;
+        const target = currentTarget();
+        if (event.key.length !== 1 || (!/[a-z]/i.test(event.key) && event.key !== " ")) return;
 
         const key = event.key.toLowerCase();
-        const target = currentTarget();
         state.totalTyped += 1;
+        if (key === " ") event.preventDefault();
         if (target && target.word[state.typed.length] === key) {
           state.correctTyped += 1;
           state.typed += key;
@@ -776,7 +835,10 @@
         state.level = Math.min(9, 1 + Math.floor(state.elapsed / 18));
         const speed = currentSpeed();
         state.distance += speed * dt;
-        state.spawnClock += dt;
+        if (!state.boss && state.level % BOSS_LEVEL_INTERVAL === 0 && !state.defeatedBossLevels.includes(state.level)) {
+          startBossEncounter(state.level);
+        }
+        state.spawnClock += state.boss ? 0 : dt;
         state.actionClock = Math.max(0, state.actionClock - dt);
         state.hurtClock = Math.max(0, state.hurtClock - dt);
         state.powerups.focus = Math.max(0, state.powerups.focus - dt);
@@ -785,7 +847,7 @@
         state.comboBurst = Math.max(0, state.comboBurst - dt);
         if (state.actionClock <= 0) state.action = "run";
 
-        if (state.spawnClock >= state.nextSpawn) {
+        if (!state.boss && state.spawnClock >= state.nextSpawn) {
           state.spawnClock = 0;
           const baseSpawn = Math.max(cfg.spawnMin, cfg.spawn - state.level * cfg.spawnLevel + Math.random() * 0.45);
           state.nextSpawn = baseSpawn * warmupSpawnFactor();
@@ -793,12 +855,20 @@
         }
 
         for (const entity of state.entities) {
-          entity.x -= speed * dt;
+          if (entity.type === "boss") {
+            entity.attackClock -= dt;
+          } else {
+            entity.x -= speed * dt;
+          }
           entity.pop = Math.max(0, entity.pop - dt);
         }
 
         const danger = currentTarget();
-        if (danger && danger.x < HERO_HIT_X && !danger.done) {
+        if (danger && danger.type === "boss" && danger.attackClock <= 0 && !danger.done) {
+          missTarget(danger);
+          state.boss = null;
+          state.defeatedBossLevels.push(danger.level);
+        } else if (danger && danger.x < HERO_HIT_X && !danger.done) {
           missTarget(danger);
         } else if (state.timeLeft <= 0) {
           endGame("Time ran out on the road.");
@@ -917,6 +987,19 @@
           pixelRect(entity.x, entity.y - entity.h, entity.w, entity.h, "#24334f");
           pixelRect(entity.x + 5, entity.y - entity.h + 5, entity.w - 10, entity.h - 10, color);
           pixelRect(entity.x + 12, entity.y - entity.h + 12, 10, 10, "#fff8c9");
+        } else if (entity.type === "boss") {
+          const pulse = Math.sin(performance.now() / 160) * 4;
+          pixelRect(entity.x + 20, entity.y - entity.h - 18 + pulse, 82, 28, "#512d47");
+          pixelRect(entity.x, entity.y - entity.h, entity.w, entity.h, "#6b2f57");
+          pixelRect(entity.x + 14, entity.y - entity.h + 18, entity.w - 28, 36, "#9b4b62");
+          pixelRect(entity.x + 24, entity.y - entity.h - 34 + pulse, 24, 28, "#d09a4c");
+          pixelRect(entity.x + 74, entity.y - entity.h - 34 - pulse, 24, 28, "#d09a4c");
+          pixelRect(entity.x + 32, entity.y - entity.h + 42, 12, 12, "#ffe28b");
+          pixelRect(entity.x + 78, entity.y - entity.h + 42, 12, 12, "#ffe28b");
+          pixelRect(entity.x - 24, entity.y - entity.h + 62, 28, 16, "#d67a58");
+          pixelRect(entity.x + entity.w - 4, entity.y - entity.h + 62, 28, 16, "#d67a58");
+          const warning = entity.attackClock < 1.4 && Math.floor(performance.now() / 110) % 2 === 0;
+          pixelRect(HERO_HIT_X - 18, 258, 36, 174, warning ? "#ff6a61" : "rgba(255, 106, 97, 0.32)");
         } else {
           pixelRect(entity.x, entity.y - entity.h, entity.w, entity.h, "#6b6f7e");
           pixelRect(entity.x + 8, entity.y - entity.h - 16, 12, 18, "#969ba8");
@@ -924,6 +1007,26 @@
           pixelRect(entity.x + 6, entity.y - 12, 26, 8, "#444955");
         }
         drawWordBubble(entity);
+      }
+
+      function drawBossHealth() {
+        if (!state.boss || state.boss.done) return;
+        const boss = state.boss;
+        const remaining = boss.words.length - boss.wordIndex;
+        const healthRatio = Math.max(0, remaining / boss.maxHealth);
+        const attackRatio = Math.max(0, boss.attackClock / boss.attackDuration);
+        const x = 256;
+        const y = 28;
+        const w = 448;
+        pixelRect(x, y, w, 42, "#111827");
+        pixelRect(x + 5, y + 5, w - 10, 14, "#3c2237");
+        pixelRect(x + 5, y + 5, (w - 10) * healthRatio, 14, "#ff6a61");
+        pixelRect(x + 5, y + 25, w - 10, 8, "#253049");
+        pixelRect(x + 5, y + 25, (w - 10) * attackRatio, 8, "#f5c452");
+        ctx.textAlign = "center";
+        ctx.font = "bold 16px Trebuchet MS, sans-serif";
+        ctx.fillStyle = "#ffe28b";
+        ctx.fillText(`Boss ${boss.wordIndex + 1}/${boss.words.length}`, x + w / 2, y + 56);
       }
 
       function drawWordBubble(entity) {
@@ -946,6 +1049,7 @@
         drawBackground(t);
         for (const entity of state.entities) drawEntity(entity);
         drawHero(t);
+        drawBossHealth();
         if (state.mode === "playing" && state.countdown > 0) {
           drawCountdown();
         }
