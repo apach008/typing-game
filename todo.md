@@ -133,7 +133,7 @@
   - Move secondary target bubbles higher or fade them slightly.
   - Add an arrow or outline to make the current target unmistakable.
 
-- [ ] Add camera effects.
+- [x] Add camera effects.
   - Slight push forward at high streaks.
   - Brief slowdown when a boss appears.
   - Subtle impact zoom on attacks.
