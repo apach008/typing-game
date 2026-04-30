@@ -574,7 +574,7 @@
 
     .best-grid {
       display: grid;
-      grid-template-columns: repeat(5, 1fr);
+      grid-template-columns: repeat(4, 1fr);
       gap: 6px;
     }
 
@@ -1076,7 +1076,7 @@
 <body>
   <main class="game-shell">
     <section class="hud" aria-label="Game stats">
-      <div class="stat"><span>Net WPM</span><strong id="wpm">0</strong></div>
+      <div class="stat"><span>WPM</span><strong id="wpm">0</strong></div>
       <div class="stat"><span>Accuracy</span><strong id="accuracy">100%</strong></div>
       <div class="stat"><span>Streak</span><strong id="streak">0</strong></div>
       <div class="stat"><span id="timerLabel">Timer</span><strong id="timer">90</strong></div>
@@ -1173,7 +1173,7 @@
             <p id="dailyStatus">Daily challenge ready &mdash; same seed for every player today.</p>
             <div class="daily-grid">
               <div class="daily-stat"><span>Today's Score</span><strong id="dailyTodayScore">-</strong></div>
-              <div class="daily-stat"><span>Net WPM</span><strong id="dailyTodayNetWpm">-</strong></div>
+              <div class="daily-stat"><span>WPM</span><strong id="dailyTodayNetWpm">-</strong></div>
               <div class="daily-stat"><span>Accuracy</span><strong id="dailyTodayAccuracy">-</strong></div>
               <div class="daily-stat"><span>Streak</span><strong id="dailyStreak">0</strong></div>
             </div>
@@ -1235,8 +1235,7 @@
           <section class="best-panel" aria-labelledby="personalBestsTitle">
             <h2 id="personalBestsTitle">Easy Personal Bests</h2>
             <div class="best-grid">
-              <div class="best-stat"><span>Net WPM</span><strong id="bestNetWpm">-</strong></div>
-              <div class="best-stat"><span>Raw WPM</span><strong id="bestRawWpm">-</strong></div>
+              <div class="best-stat"><span>WPM</span><strong id="bestNetWpm">-</strong></div>
               <div class="best-stat"><span>Accuracy</span><strong id="bestAccuracy">-</strong></div>
               <div class="best-stat"><span>Streak</span><strong id="bestStreak">-</strong></div>
               <div class="best-stat"><span>Score</span><strong id="bestScore">-</strong></div>
@@ -1402,8 +1401,7 @@
           <div class="new-best-banner" id="newBestBanner" hidden>New Best!</div>
           <div class="final-grid">
             <div class="final-stat"><span>Score</span><strong id="finalScore">0</strong></div>
-            <div class="final-stat"><span>Raw WPM</span><strong id="finalRawWpm">0</strong></div>
-            <div class="final-stat"><span>Net WPM</span><strong id="finalNetWpm">0</strong></div>
+            <div class="final-stat"><span>WPM</span><strong id="finalNetWpm">0</strong></div>
             <div class="final-stat"><span>Accuracy</span><strong id="finalAccuracy">100%</strong></div>
             <div class="final-stat"><span>Streak</span><strong id="finalStreak">0</strong></div>
             <div class="final-stat"><span>Total Keys</span><strong id="finalTotalKeys">0</strong></div>
@@ -1416,10 +1414,10 @@
             <div class="final-stat final-stat-wide final-stat-chart" id="finalChartWrap" hidden>
               <span>Pace Over Time</span>
               <div class="final-chart-legend">
-                <span class="final-chart-legend-net">Net WPM</span>
+                <span class="final-chart-legend-net">WPM</span>
                 <span class="final-chart-legend-acc">Accuracy</span>
               </div>
-              <canvas id="finalChart" width="512" height="180" aria-label="Net WPM and accuracy over time"></canvas>
+              <canvas id="finalChart" width="512" height="180" aria-label="WPM and accuracy over time"></canvas>
             </div>
           </div>
           <button class="primary" id="continueButton" hidden>Continue from Level 1</button>
@@ -1470,7 +1468,6 @@
         gameOverScreen: document.getElementById("gameOverScreen"),
         pauseScreen: document.getElementById("pauseScreen"),
         finalScore: document.getElementById("finalScore"),
-        finalRawWpm: document.getElementById("finalRawWpm"),
         finalNetWpm: document.getElementById("finalNetWpm"),
         finalAccuracy: document.getElementById("finalAccuracy"),
         finalStreak: document.getElementById("finalStreak"),
@@ -1489,7 +1486,6 @@
         gameOverMenuButton: document.getElementById("gameOverMenuButton"),
         personalBestsTitle: document.getElementById("personalBestsTitle"),
         bestNetWpm: document.getElementById("bestNetWpm"),
-        bestRawWpm: document.getElementById("bestRawWpm"),
         bestAccuracy: document.getElementById("bestAccuracy"),
         bestStreak: document.getElementById("bestStreak"),
         bestScore: document.getElementById("bestScore"),
@@ -2193,14 +2189,13 @@
       const RUN_LENGTHS = [30, 60, 120];
       const TYPING_MODE_KEYS = ["beginner", "advanced", "expert"];
       const PERSONAL_BEST_FIELDS = [
-        { key: "netWpm", label: "Net WPM" },
-        { key: "rawWpm", label: "Raw WPM" },
+        { key: "netWpm", label: "WPM" },
         { key: "accuracy", label: "Accuracy" },
         { key: "streak", label: "Streak" },
         { key: "score", label: "Score" }
       ];
       const ACHIEVEMENTS = [
-        { id: "first-60-wpm", title: "60 WPM", description: "Reach 60 Net WPM in a run." },
+        { id: "first-60-wpm", title: "60 WPM", description: "Reach 60 WPM in a run." },
         { id: "first-50-streak", title: "50 Streak", description: "Build a 50-word streak." },
         { id: "first-boss-kill", title: "Boss Breaker", description: "Defeat your first boss." },
         { id: "first-daily-7", title: "Daily Seven", description: "Log a 7-day daily streak." },
@@ -2298,7 +2293,6 @@
       function emptyPersonalBest() {
         return {
           netWpm: 0,
-          rawWpm: 0,
           accuracy: 0,
           streak: 0,
           score: 0
@@ -2376,7 +2370,6 @@
         const best = personalBestForContext();
         els.personalBestsTitle.textContent = `${runContextLabel()} Personal Bests`;
         els.bestNetWpm.textContent = formatBestValue("netWpm", best.netWpm);
-        els.bestRawWpm.textContent = formatBestValue("rawWpm", best.rawWpm);
         els.bestAccuracy.textContent = formatBestValue("accuracy", best.accuracy);
         els.bestStreak.textContent = formatBestValue("streak", best.streak);
         els.bestScore.textContent = formatBestValue("score", best.score);
@@ -2836,7 +2829,7 @@
       }
 
       function dailyShareString(result) {
-        return `TypeQuest Daily ${result.date} (${difficultyLabel(result.difficulty)}, ${normalizeRunLength(result.runLength)}s) · ${result.netWpm} NetWPM · ${result.accuracy}%`;
+        return `TypeQuest Daily ${result.date} (${difficultyLabel(result.difficulty)}, ${normalizeRunLength(result.runLength)}s) · ${result.netWpm} WPM · ${result.accuracy}%`;
       }
 
       function readSoundMuted() {
@@ -3766,7 +3759,6 @@
 
       function endGame(message, won = false) {
         state.mode = "over";
-        const finalRawWpm = currentRawWpm();
         const finalNetWpm = currentNetWpm();
         const finalAccuracy = currentAccuracy();
         const finalMistypedKeys = currentMistypedKeys();
@@ -3786,7 +3778,6 @@
         const hadPersonalBest = hasExistingPersonalBest(state.runMode, state.difficulty);
         const improvedBests = recordPersonalBests(state.runMode, state.difficulty, {
           netWpm: finalNetWpm,
-          rawWpm: finalRawWpm,
           accuracy: finalAccuracy,
           streak: state.bestStreak,
           score: state.score
@@ -3794,7 +3785,6 @@
         if (runModes[state.runMode].daily) {
           recordDailyResult({
             netWpm: finalNetWpm,
-            rawWpm: finalRawWpm,
             accuracy: finalAccuracy,
             score: state.score,
             streak: state.bestStreak,
@@ -3813,7 +3803,6 @@
         els.gameOverText.textContent = message;
         els.finalRunContext.textContent = runContextLabel();
         els.finalScore.textContent = state.score;
-        els.finalRawWpm.textContent = finalRawWpm;
         els.finalNetWpm.textContent = finalNetWpm;
         els.finalAccuracy.textContent = `${finalAccuracy}%`;
         els.finalStreak.textContent = state.streak;
@@ -4150,13 +4139,8 @@
         return minutes;
       }
 
-      function currentRawWpm() {
-        return Math.round((state.totalTyped / 5) / runMinutes());
-      }
-
       function currentNetWpm() {
-        const mistypedKeys = state.totalTyped - state.correctTyped;
-        return Math.max(0, Math.round(((state.correctTyped - mistypedKeys) / 5) / runMinutes()));
+        return Math.round((state.correctTyped / 5) / runMinutes());
       }
 
       function currentAccuracy() {
