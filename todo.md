@@ -50,7 +50,7 @@
   - Combo shield: preserves streak after one typo.
   - Coin magnet: bonus score for the next few words.
 
-- [ ] Add combo milestones.
+- [x] Add combo milestones.
   - Every 5 clean words: small score multiplier.
   - Every 10 clean words: time bonus and visual burst.
   - Every 25 clean words: temporary speed boost or score frenzy.
@@ -156,10 +156,6 @@
   - Damage.
   - Level up.
   - Game over.
-
-- [ ] Add simple procedural background music.
-  - Use Web Audio oscillators with a low-volume chiptune loop.
-  - Change melody or tempo by theme and danger level.
 
 - [ ] Add audio ducking during errors and game over.
   - Makes important events more obvious.

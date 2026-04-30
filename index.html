@@ -372,6 +372,14 @@
       const WARMUP_SECONDS = 10;
       const WARMUP_START_SPEED_FACTOR = 0.72;
       const WARMUP_START_SPAWN_FACTOR = 1.55;
+      const COMBO_STEP = 5;
+      const COMBO_MULTIPLIER_STEP = 0.1;
+      const COMBO_MULTIPLIER_CAP = 1.5;
+      const COMBO_TIME_STEP = 10;
+      const COMBO_TIME_BONUS = 5;
+      const COMBO_FRENZY_STEP = 25;
+      const COMBO_FRENZY_DURATION = 8;
+      const COMBO_FRENZY_MULTIPLIER = 2;
       const HERO_HIT_X = 154;
       const BASE_SPAWN_X = 1040;
       const DIFFICULTY_REACTION_BUFFER = {
@@ -408,9 +416,13 @@
             focus: 0,
             shield: 0,
             magnet: 0,
+            frenzy: 0,
             message: "",
             messageClock: 0
           },
+          comboBurst: 0,
+          comboBurstDuration: 1,
+          comboBurstLabel: "",
           level: 1,
           action: "run",
           actionClock: 0,
@@ -534,6 +546,45 @@
         beep("level");
       }
 
+      function comboMultiplier() {
+        const streakBands = Math.floor(state.streak / COMBO_STEP);
+        const streakMultiplier = 1 + streakBands * COMBO_MULTIPLIER_STEP;
+        const cappedMultiplier = Math.min(COMBO_MULTIPLIER_CAP, streakMultiplier);
+        const frenzyMultiplier = state.powerups.frenzy > 0 ? COMBO_FRENZY_MULTIPLIER : 1;
+        return cappedMultiplier * frenzyMultiplier;
+      }
+
+      function triggerComboBurst(label, duration = 0.9) {
+        state.comboBurst = duration;
+        state.comboBurstDuration = duration;
+        state.comboBurstLabel = label;
+        state.powerups.message = label;
+        state.powerups.messageClock = Math.max(state.powerups.messageClock, duration);
+      }
+
+      function applyComboMilestones() {
+        if (state.streak <= 0 || state.streak % COMBO_STEP !== 0) return false;
+
+        let label = `Combo x${comboMultiplier().toFixed(1)}`;
+        let playedLevelCue = false;
+
+        if (state.streak % COMBO_TIME_STEP === 0) {
+          state.timeLeft += COMBO_TIME_BONUS;
+          label = `+${COMBO_TIME_BONUS}s combo`;
+          playedLevelCue = true;
+        }
+
+        if (state.streak % COMBO_FRENZY_STEP === 0) {
+          state.powerups.frenzy = COMBO_FRENZY_DURATION;
+          label = "Score frenzy";
+          playedLevelCue = true;
+        }
+
+        triggerComboBurst(label, playedLevelCue ? 1.15 : 0.85);
+        if (playedLevelCue) beep("level");
+        return playedLevelCue;
+      }
+
       function startGame() {
         audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
         const selectedDifficulty = state.difficulty;
@@ -582,23 +633,20 @@
         state.completedChars += target.word.length;
         state.streak += 1;
         state.bestStreak = Math.max(state.bestStreak, state.streak);
-        const completedLength = target.words.reduce((sum, word) => sum + word.length, 0);
-        const baseScore = completedLength * 10 + state.streak * 5 + state.level * 8;
-        const magnetBonus = state.powerups.magnet > 0 ? 1.5 : 1;
-        state.score += Math.round(baseScore * target.scoreScale * magnetBonus);
-        if (state.powerups.magnet > 0 && target.type !== "powerup") state.powerups.magnet -= 1;
         state.typed = "";
         state.action = target.category === "enemy" || target.type === "flying" || target.type === "shielded" ? "attack" : "jump";
         state.actionClock = 0.45;
         if (target.type === "powerup") {
           applyPowerup(target.powerup);
           state.action = "jump";
-          return;
         }
-        if (state.streak > 0 && state.streak % 10 === 0) {
-          state.timeLeft += 5;
-          beep("level");
-        } else {
+        const playedComboCue = applyComboMilestones();
+        const completedLength = target.words.reduce((sum, word) => sum + word.length, 0);
+        const baseScore = completedLength * 10 + state.streak * 5 + state.level * 8;
+        const magnetBonus = state.powerups.magnet > 0 ? 1.5 : 1;
+        state.score += Math.round(baseScore * target.scoreScale * magnetBonus * comboMultiplier());
+        if (state.powerups.magnet > 0 && target.type !== "powerup") state.powerups.magnet -= 1;
+        if (!playedComboCue && target.type !== "powerup") {
           beep("complete");
         }
       }
@@ -706,9 +754,11 @@
 
       function activePowerupLabel() {
         if (state.powerups.messageClock > 0) return state.powerups.message;
+        if (state.powerups.frenzy > 0) return `Frenzy ${Math.ceil(state.powerups.frenzy)}s`;
         if (state.powerups.focus > 0) return `Focus ${Math.ceil(state.powerups.focus)}s`;
         if (state.powerups.shield > 0) return `Shield x${state.powerups.shield}`;
         if (state.powerups.magnet > 0) return `Magnet x${state.powerups.magnet}`;
+        if (state.streak >= COMBO_STEP) return `Combo x${comboMultiplier().toFixed(1)}`;
         return "-";
       }
 
@@ -730,7 +780,9 @@
         state.actionClock = Math.max(0, state.actionClock - dt);
         state.hurtClock = Math.max(0, state.hurtClock - dt);
         state.powerups.focus = Math.max(0, state.powerups.focus - dt);
+        state.powerups.frenzy = Math.max(0, state.powerups.frenzy - dt);
         state.powerups.messageClock = Math.max(0, state.powerups.messageClock - dt);
+        state.comboBurst = Math.max(0, state.comboBurst - dt);
         if (state.actionClock <= 0) state.action = "run";
 
         if (state.spawnClock >= state.nextSpawn) {
@@ -897,10 +949,38 @@
         if (state.mode === "playing" && state.countdown > 0) {
           drawCountdown();
         }
+        if (state.comboBurst > 0) {
+          drawComboBurst();
+        }
         if (state.mode !== "playing") {
           ctx.fillStyle = "rgba(0, 0, 0, 0.18)";
           ctx.fillRect(0, 0, canvas.width, canvas.height);
         }
+      }
+
+      function drawComboBurst() {
+        const progress = state.comboBurst / state.comboBurstDuration;
+        const alpha = Math.min(1, state.comboBurst * 2);
+        const radius = 32 + (1 - progress) * 46;
+        ctx.save();
+        ctx.globalAlpha = alpha;
+        ctx.strokeStyle = "#ffe28b";
+        ctx.lineWidth = 5;
+        ctx.beginPath();
+        ctx.arc(154, 324, radius, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.strokeStyle = "#67c7df";
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.arc(154, 324, radius + 16, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.textAlign = "center";
+        ctx.font = "bold 26px Trebuchet MS, sans-serif";
+        ctx.fillStyle = "#512d47";
+        ctx.fillText(state.comboBurstLabel, canvas.width / 2 + 3, 128 + 3);
+        ctx.fillStyle = "#ffe28b";
+        ctx.fillText(state.comboBurstLabel, canvas.width / 2, 128);
+        ctx.restore();
       }
 
       function drawCountdown() {
