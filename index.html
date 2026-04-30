@@ -262,6 +262,19 @@
       text-underline-offset: 3px;
     }
 
+    .desktop-notice {
+      display: none;
+      margin: 12px 0 0;
+      border: 1px solid #ffd271;
+      background: #2f2741;
+      color: #fff3c4;
+      padding: 10px 12px;
+      font-size: 13px;
+      font-weight: 700;
+      line-height: 1.35;
+      text-align: center;
+    }
+
     .settings-panel {
       width: min(520px, 100%);
     }
@@ -622,6 +635,12 @@
         grid-template-columns: 1fr;
       }
     }
+
+    @media (pointer: coarse) {
+      .desktop-notice {
+        display: block;
+      }
+    }
   </style>
 </head>
 <body>
@@ -702,6 +721,7 @@
             <button class="primary" id="startButton">Start Run</button>
             <button class="sound-toggle" id="startMuteButton" type="button" aria-pressed="false">Sound On</button>
             <button id="startSettingsButton" type="button">Settings</button>
+            <div class="desktop-notice" role="status">Best on desktop with a physical keyboard.</div>
             <div class="sound-theme" aria-label="Keypress sound theme">
               <span class="sound-theme-label">Key Sound</span>
               <div class="sound-theme-options" role="group" aria-label="Keypress sound theme">

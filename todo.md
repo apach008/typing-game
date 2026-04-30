@@ -56,5 +56,5 @@ To do, ordered by impact (highest first):
 - [x] Add a favicon and page metadata.
   - Small pixel key/sword icon, `<title>`, and a basic `<meta name="description">` / `og:title` for shareable links.
 
-- [ ] Add a "best on desktop" notice for touch devices.
+- [x] Add a "best on desktop" notice for touch devices.
   - Detect via `(pointer: coarse)` and show a small banner — typing-practice on a phone keyboard is a frustrating first impression.
