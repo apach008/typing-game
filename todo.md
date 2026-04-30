@@ -55,7 +55,7 @@
   - Every 10 clean words: time bonus and visual burst.
   - Every 25 clean words: temporary speed boost or score frenzy.
 
-- [ ] Add boss encounters.
+- [x] Add boss encounters.
   - Every 3 levels, pause normal spawning and show a larger enemy.
   - Bosses require a sequence of words or short phrases.
   - Show a boss health bar and attack telegraphs.
@@ -185,7 +185,50 @@
 - [ ] Add seed display and copyable challenge code.
   - Lets players replay or share the same run.
 
-## Priority 6: Code Architecture
+## Priority 6: Accessibility
+
+- [ ] Add reduced-motion support.
+  - Respect `prefers-reduced-motion`.
+  - Disable shake, heavy particle effects, and camera zoom when enabled.
+
+- [ ] Improve keyboard focus flow.
+  - Difficulty buttons and Start/Retry should have clear focus order.
+  - Start screen should trap focus while visible.
+
+- [ ] Add colorblind-safe feedback.
+  - Do not rely only on green/red for correct and incorrect input.
+  - Use shapes, outlines, text states, or icons in addition to color.
+
+- [ ] Add larger text mode.
+  - Scale word bubbles and HUD text independently from viewport size.
+
+- [ ] Add ARIA live updates for important non-canvas events.
+  - Game started.
+  - Damage taken.
+  - Level up.
+  - Game over with final stats.
+
+- [ ] Add a no-audio feedback path.
+  - Strong visual cues for all events currently communicated by beeps.
+
+## Priority 7: Mobile And Browser Support
+
+- [ ] Decide whether mobile is supported.
+  - Current game requires a physical keyboard.
+  - If mobile is supported, add an on-screen keyboard or mobile-specific typing input.
+
+- [ ] Add a hidden input focus strategy for soft keyboards.
+  - Useful for tablets and phones with virtual keyboards.
+
+- [ ] Add responsive canvas scaling tests.
+  - Verify desktop, laptop, tablet, and narrow mobile layouts.
+  - Ensure word bubbles, HUD, and typebar never overlap.
+
+- [ ] Add browser compatibility checks.
+  - Chrome, Edge, Firefox, Safari.
+  - Confirm Web Audio startup behavior after user gesture.
+
+## Priority 8: Code Architecture
 
 - [ ] Split the single script into clear internal modules while staying in one HTML file.
   - `config`
