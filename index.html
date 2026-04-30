@@ -177,6 +177,29 @@
       color: #fff3c4;
     }
 
+    .difficulty button {
+      display: grid;
+      gap: 4px;
+      align-content: center;
+      min-height: 86px;
+    }
+
+    .difficulty-label {
+      display: block;
+    }
+
+    .difficulty-description {
+      display: block;
+      color: #ddd5b5;
+      font-size: 12px;
+      font-weight: 500;
+      line-height: 1.25;
+    }
+
+    .difficulty button.active .difficulty-description {
+      color: #fff0bc;
+    }
+
     .primary {
       width: 100%;
       margin-top: 8px;
@@ -622,9 +645,18 @@
             <button data-run-mode="daily">Daily</button>
           </div>
           <div class="difficulty" role="group" aria-label="Difficulty">
-            <button class="active" data-difficulty="easy">Easy</button>
-            <button data-difficulty="normal">Normal</button>
-            <button data-difficulty="hard">Hard</button>
+            <button class="active" data-difficulty="easy">
+              <span class="difficulty-label">Easy</span>
+              <span class="difficulty-description">Short common words, slow threats, forgiving timers.</span>
+            </button>
+            <button data-difficulty="normal">
+              <span class="difficulty-label">Normal</span>
+              <span class="difficulty-description">Balanced runner pacing.</span>
+            </button>
+            <button data-difficulty="hard">
+              <span class="difficulty-label">Hard</span>
+              <span class="difficulty-description">Longer, rarer words, dense threats, strict pacing.</span>
+            </button>
           </div>
           <div class="typing-modes" role="group" aria-label="Typing mode">
             <button class="active" data-typing-mode="beginner">Beginner</button>

@@ -43,7 +43,7 @@ To do, ordered by impact (highest first):
   - Player picks (or auto-suggests from their lifetime mistake heatmap) a letter or bigram, and the next run filters words containing it.
   - Single highest-value mode for players who actually want to fix specific weaknesses.
 
-- [ ] Add inline difficulty descriptions on the start screen.
+- [x] Add inline difficulty descriptions on the start screen.
   - One-liner under each option so players choose deliberately. No separate modal.
   - Easy: short common words, slow threats, forgiving timers.
   - Normal: balanced runner pacing.
