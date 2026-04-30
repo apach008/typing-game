@@ -117,7 +117,7 @@
   - Use small arrays of pixel rects or embedded sprite sheets.
   - Keep assets self-contained in the HTML if the single-file requirement remains.
 
-- [ ] Add hit effects.
+- [x] Add hit effects.
   - Sword slash arc.
   - Enemy impact flash.
   - Dust puff when jumping.

@@ -893,7 +893,9 @@
           defeatedBossLevels: [],
           action: "run",
           actionClock: 0,
-          hurtClock: 0
+          hurtClock: 0,
+          screenShake: 0,
+          effects: []
         };
       }
 
@@ -1250,6 +1252,7 @@
         recordReactionTime(target);
 
         if (target.wordIndex < target.words.length - 1) {
+          addHitEffect(target, "impact");
           target.wordIndex += 1;
           target.word = target.words[target.wordIndex];
           state.completedChars += state.typed.length;
@@ -1267,6 +1270,7 @@
 
         target.done = true;
         target.pop = 0.35;
+        addHitEffect(target, target.category === "enemy" || target.type === "boss" ? "defeat" : "collect");
         state.reactionTargetKey = "";
         state.completedChars += target.word.length;
         state.streak += 1;
@@ -1277,6 +1281,11 @@
         clearTypoRecovery();
         state.action = target.category === "enemy" || target.type === "flying" || target.type === "shielded" ? "attack" : "jump";
         state.actionClock = 0.45;
+        if (state.action === "attack") {
+          addSlashEffect(target);
+        } else {
+          addDustEffect();
+        }
         if (target.type === "boss") {
           state.boss = null;
           state.defeatedBossLevels.push(target.level);
@@ -1356,6 +1365,7 @@
         state.streak = 0;
         state.score = Math.max(0, state.score - 15);
         state.hurtClock = 0.25;
+        state.screenShake = Math.max(state.screenShake, 0.12);
         state.typoLock = TYPO_LOCK_SECONDS;
         state.expectedFlash = expectedLetter(target) ? TYPO_FLASH_SECONDS : 0;
         els.typebar.classList.remove("wrong");
@@ -1383,6 +1393,8 @@
         state.action = "hurt";
         state.actionClock = 0.36;
         state.hurtClock = 0.5;
+        state.screenShake = Math.max(state.screenShake, 0.26);
+        addHitEffect({ x: HERO_HIT_X - 26, y: 410, w: 44, h: 70, optional: false }, "damage");
 
         if (state.hearts <= 0) {
           endGame(`No hearts left. The word "${target.word}" reached the hero.`);
@@ -1529,6 +1541,8 @@
         state.powerups.frenzy = Math.max(0, state.powerups.frenzy - dt);
         state.powerups.messageClock = Math.max(0, state.powerups.messageClock - dt);
         state.comboBurst = Math.max(0, state.comboBurst - dt);
+        state.screenShake = Math.max(0, state.screenShake - dt);
+        updateEffects(dt);
         if (state.actionClock <= 0) state.action = "run";
 
         if (!state.boss && state.spawnClock >= state.nextSpawn) {
@@ -1562,6 +1576,71 @@
 
         state.entities = state.entities.filter(entity => entity.x > -100 && (entity.pop > 0 || !entity.done));
         updateHud();
+      }
+
+      function addEffect(effect) {
+        state.effects.push({
+          age: 0,
+          duration: 0.45,
+          vx: 0,
+          vy: 0,
+          gravity: 0,
+          ...effect
+        });
+      }
+
+      function addSlashEffect(target) {
+        const x = target.type === "boss" ? target.x + 24 : Math.max(188, target.x - 10);
+        const y = target.type === "flying" ? target.y + 18 : target.y - target.h / 2;
+        addEffect({ type: "slash", x, y, duration: 0.24, color: "#d8edf2" });
+      }
+
+      function addDustEffect() {
+        for (let i = 0; i < 8; i++) {
+          addEffect({
+            type: "particle",
+            x: 142 + random() * 42,
+            y: 432 + random() * 12,
+            vx: -45 - random() * 80,
+            vy: -25 - random() * 42,
+            gravity: 120,
+            size: 4 + random() * 6,
+            color: random() > 0.45 ? "#c6b28a" : "#f0d18a",
+            duration: 0.42 + random() * 0.2
+          });
+        }
+      }
+
+      function addHitEffect(target, kind) {
+        const centerX = target.x + target.w / 2;
+        const centerY = target.y - target.h / 2;
+        const colors = kind === "damage" ? ["#ff6a61", "#ffe28b"] : kind === "collect" ? ["#f5c452", "#8ff0ff"] : ["#ffe28b", "#ff8a61"];
+        addEffect({ type: "flash", x: centerX, y: centerY, duration: 0.2, radius: kind === "damage" ? 42 : 30, color: colors[0] });
+        for (let i = 0; i < 12; i++) {
+          const angle = random() * Math.PI * 2;
+          const speed = 70 + random() * 130;
+          addEffect({
+            type: "particle",
+            x: centerX + random() * 12 - 6,
+            y: centerY + random() * 12 - 6,
+            vx: Math.cos(angle) * speed,
+            vy: Math.sin(angle) * speed - 35,
+            gravity: 180,
+            size: 3 + random() * 5,
+            color: colors[i % colors.length],
+            duration: 0.34 + random() * 0.28
+          });
+        }
+      }
+
+      function updateEffects(dt) {
+        for (const effect of state.effects) {
+          effect.age += dt;
+          effect.x += effect.vx * dt;
+          effect.y += effect.vy * dt;
+          effect.vy += effect.gravity * dt;
+        }
+        state.effects = state.effects.filter(effect => effect.age < effect.duration);
       }
 
       function pixelRect(x, y, w, h, color) {
@@ -1645,6 +1724,35 @@
           pixelRect(x + 102, y - 42, 10, 14, "#f5c452");
           pixelRect(x + 62, y - 48, 8, 8, "rgba(255, 226, 139, 0.72)");
           pixelRect(x + 76, y - 52, 8, 8, "rgba(255, 226, 139, 0.48)");
+        }
+      }
+
+      function drawEffects() {
+        for (const effect of state.effects) {
+          const progress = effect.age / effect.duration;
+          const alpha = Math.max(0, 1 - progress);
+          ctx.save();
+          ctx.globalAlpha = alpha;
+          if (effect.type === "slash") {
+            ctx.strokeStyle = effect.color;
+            ctx.lineWidth = 8;
+            ctx.beginPath();
+            ctx.arc(effect.x, effect.y, 38 + progress * 18, -0.75, 0.55);
+            ctx.stroke();
+            ctx.lineWidth = 3;
+            ctx.strokeStyle = "#ffe28b";
+            ctx.beginPath();
+            ctx.arc(effect.x + 8, effect.y + 2, 52 + progress * 16, -0.72, 0.48);
+            ctx.stroke();
+          } else if (effect.type === "flash") {
+            ctx.fillStyle = effect.color;
+            ctx.beginPath();
+            ctx.arc(effect.x, effect.y, effect.radius * (0.65 + progress), 0, Math.PI * 2);
+            ctx.fill();
+          } else {
+            pixelRect(effect.x, effect.y, effect.size, effect.size, effect.color);
+          }
+          ctx.restore();
         }
       }
 
@@ -1761,8 +1869,14 @@
 
       function draw() {
         const t = performance.now() / 1000;
+        ctx.save();
+        if (state.screenShake > 0) {
+          const shake = state.screenShake * 34;
+          ctx.translate(Math.round((Math.random() - 0.5) * shake), Math.round((Math.random() - 0.5) * shake));
+        }
         drawBackground(t);
         for (const entity of state.entities) drawEntity(entity, t);
+        drawEffects();
         drawHero(t);
         drawBossHealth();
         if (state.mode === "playing" && state.countdown > 0) {
@@ -1775,6 +1889,7 @@
           ctx.fillStyle = "rgba(0, 0, 0, 0.18)";
           ctx.fillRect(0, 0, canvas.width, canvas.height);
         }
+        ctx.restore();
       }
 
       function drawComboBurst() {
