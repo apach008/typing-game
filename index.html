@@ -1,0 +1,687 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TypeQuest Runner</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --ink: #f7f2df;
+      --muted: #b9b18d;
+      --panel: #161b2d;
+      --panel-2: #222a43;
+      --line: #3c4665;
+      --gold: #f5c452;
+      --leaf: #69d388;
+      --danger: #ff6a61;
+      --sky: #67c7df;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      background: #090b13;
+      color: var(--ink);
+      font-family: "Trebuchet MS", Verdana, sans-serif;
+    }
+
+    body {
+      display: grid;
+      place-items: center;
+    }
+
+    .game-shell {
+      width: min(1180px, 100vw);
+      height: min(760px, 100vh);
+      display: grid;
+      grid-template-rows: auto 1fr;
+      background: #0b1020;
+      border: 1px solid #202945;
+      position: relative;
+    }
+
+    .hud {
+      display: grid;
+      grid-template-columns: repeat(6, minmax(86px, 1fr));
+      gap: 1px;
+      background: #26304f;
+      border-bottom: 1px solid #3d496d;
+    }
+
+    .stat {
+      min-width: 0;
+      background: linear-gradient(180deg, #17203a, #10172c);
+      padding: 9px 12px;
+    }
+
+    .stat span {
+      display: block;
+      color: var(--muted);
+      font-size: 11px;
+      line-height: 1;
+      text-transform: uppercase;
+    }
+
+    .stat strong {
+      display: block;
+      margin-top: 4px;
+      font-size: clamp(15px, 2vw, 22px);
+      line-height: 1;
+      white-space: nowrap;
+    }
+
+    .stage {
+      position: relative;
+      min-height: 0;
+      overflow: hidden;
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      image-rendering: pixelated;
+      background: #101426;
+    }
+
+    .overlay {
+      position: absolute;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      padding: 24px;
+      background: rgba(7, 10, 18, 0.72);
+    }
+
+    .overlay[hidden] {
+      display: none;
+    }
+
+    .menu {
+      width: min(560px, 100%);
+      border: 1px solid #526087;
+      background: #141b30;
+      box-shadow: 0 22px 0 rgba(0, 0, 0, 0.28);
+      padding: 24px;
+    }
+
+    h1,
+    h2 {
+      margin: 0 0 10px;
+      color: #ffe28b;
+      font-size: clamp(30px, 6vw, 54px);
+      line-height: 0.95;
+      text-shadow: 4px 4px 0 #512d47;
+      letter-spacing: 0;
+    }
+
+    h2 {
+      font-size: clamp(28px, 5vw, 44px);
+    }
+
+    p {
+      margin: 0 0 18px;
+      color: #ddd5b5;
+      line-height: 1.45;
+    }
+
+    .difficulty {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin: 16px 0;
+    }
+
+    button {
+      appearance: none;
+      border: 1px solid #65739d;
+      background: #25304f;
+      color: var(--ink);
+      font: inherit;
+      font-weight: 700;
+      padding: 12px 10px;
+      cursor: pointer;
+      box-shadow: inset 0 -4px 0 rgba(0, 0, 0, 0.24);
+    }
+
+    button:hover,
+    button:focus-visible {
+      outline: 2px solid #f5c452;
+      outline-offset: 2px;
+    }
+
+    button.active {
+      background: #9b4b62;
+      border-color: #ffd271;
+      color: #fff3c4;
+    }
+
+    .primary {
+      width: 100%;
+      margin-top: 8px;
+      background: #2f8559;
+      border-color: #7be39b;
+      color: #f6ffe8;
+    }
+
+    .final-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px;
+      margin: 16px 0;
+    }
+
+    .final-stat {
+      background: #202942;
+      border: 1px solid #404d70;
+      padding: 12px;
+    }
+
+    .final-stat span {
+      display: block;
+      color: var(--muted);
+      font-size: 12px;
+      text-transform: uppercase;
+    }
+
+    .final-stat strong {
+      display: block;
+      margin-top: 4px;
+      font-size: 24px;
+    }
+
+    .typebar {
+      position: absolute;
+      left: 50%;
+      bottom: 18px;
+      transform: translateX(-50%);
+      width: min(560px, calc(100% - 28px));
+      min-height: 54px;
+      display: grid;
+      place-items: center;
+      border: 1px solid rgba(255, 236, 160, 0.55);
+      background: rgba(12, 17, 30, 0.82);
+      color: #fff1b0;
+      font-size: clamp(20px, 4vw, 34px);
+      font-weight: 800;
+      text-align: center;
+      text-shadow: 3px 3px 0 #422843;
+      pointer-events: none;
+    }
+
+    .typed {
+      color: #7cf4a1;
+    }
+
+    .pending {
+      color: #ffe8a3;
+    }
+
+    .wrong {
+      animation: shake 0.18s linear;
+      border-color: var(--danger);
+    }
+
+    @keyframes shake {
+      0%, 100% { transform: translateX(-50%); }
+      33% { transform: translateX(calc(-50% - 8px)); }
+      66% { transform: translateX(calc(-50% + 8px)); }
+    }
+
+    @media (max-width: 760px) {
+      .game-shell {
+        height: 100vh;
+      }
+
+      .hud {
+        grid-template-columns: repeat(3, 1fr);
+      }
+
+      .stat {
+        padding: 7px 8px;
+      }
+
+      .difficulty,
+      .final-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="game-shell">
+    <section class="hud" aria-label="Game stats">
+      <div class="stat"><span>WPM</span><strong id="wpm">0</strong></div>
+      <div class="stat"><span>Accuracy</span><strong id="accuracy">100%</strong></div>
+      <div class="stat"><span>Streak</span><strong id="streak">0</strong></div>
+      <div class="stat"><span>Timer</span><strong id="timer">90</strong></div>
+      <div class="stat"><span>Score</span><strong id="score">0</strong></div>
+      <div class="stat"><span>Level</span><strong id="level">1</strong></div>
+    </section>
+
+    <section class="stage">
+      <canvas id="game" width="960" height="540" aria-label="TypeQuest Runner game canvas"></canvas>
+      <div class="typebar" id="typebar"><span>Choose a difficulty to begin</span></div>
+
+      <div class="overlay" id="startScreen">
+        <div class="menu">
+          <h1>TypeQuest Runner</h1>
+          <p>Type the word above the next threat. Obstacles make the hero jump, enemies trigger attacks, and every clean word keeps the run alive.</p>
+          <div class="difficulty" role="group" aria-label="Difficulty">
+            <button class="active" data-difficulty="easy">Easy</button>
+            <button data-difficulty="normal">Normal</button>
+            <button data-difficulty="hard">Hard</button>
+          </div>
+          <button class="primary" id="startButton">Start Run</button>
+        </div>
+      </div>
+
+      <div class="overlay" id="gameOverScreen" hidden>
+        <div class="menu">
+          <h2>Game Over</h2>
+          <p id="gameOverText">The trail ends here.</p>
+          <div class="final-grid">
+            <div class="final-stat"><span>Score</span><strong id="finalScore">0</strong></div>
+            <div class="final-stat"><span>WPM</span><strong id="finalWpm">0</strong></div>
+            <div class="final-stat"><span>Accuracy</span><strong id="finalAccuracy">100%</strong></div>
+            <div class="final-stat"><span>Best Streak</span><strong id="finalStreak">0</strong></div>
+          </div>
+          <button class="primary" id="againButton">Run Again</button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    (() => {
+      const canvas = document.getElementById("game");
+      const ctx = canvas.getContext("2d");
+      const els = {
+        wpm: document.getElementById("wpm"),
+        accuracy: document.getElementById("accuracy"),
+        streak: document.getElementById("streak"),
+        timer: document.getElementById("timer"),
+        score: document.getElementById("score"),
+        level: document.getElementById("level"),
+        typebar: document.getElementById("typebar"),
+        startScreen: document.getElementById("startScreen"),
+        gameOverScreen: document.getElementById("gameOverScreen"),
+        finalScore: document.getElementById("finalScore"),
+        finalWpm: document.getElementById("finalWpm"),
+        finalAccuracy: document.getElementById("finalAccuracy"),
+        finalStreak: document.getElementById("finalStreak"),
+        gameOverText: document.getElementById("gameOverText")
+      };
+
+      const palettes = {
+        easy: { speed: 120, spawn: 2.3, time: 100, wordMin: 3, wordMax: 5 },
+        normal: { speed: 160, spawn: 1.8, time: 90, wordMin: 4, wordMax: 7 },
+        hard: { speed: 210, spawn: 1.35, time: 80, wordMin: 5, wordMax: 9 }
+      };
+
+      const words = [
+        "torch", "cave", "river", "blade", "jump", "quest", "spark", "rune", "storm", "castle",
+        "bridge", "shadow", "wizard", "goblet", "meteor", "crystal", "valley", "danger", "lantern",
+        "thunder", "treasure", "victory", "ember", "portal", "forest", "dragon", "silver", "shield",
+        "anchor", "charge", "swift", "secret", "keeper", "phantom", "summit", "hammer", "legend"
+      ];
+
+      let audioCtx;
+      let state = makeState();
+      let last = performance.now();
+      let raf = 0;
+
+      function makeState() {
+        return {
+          mode: "menu",
+          difficulty: "easy",
+          elapsed: 0,
+          timeLeft: 100,
+          distance: 0,
+          spawnClock: 0,
+          nextSpawn: 1.4,
+          entities: [],
+          typed: "",
+          totalTyped: 0,
+          correctTyped: 0,
+          completedChars: 0,
+          streak: 0,
+          bestStreak: 0,
+          score: 0,
+          level: 1,
+          action: "run",
+          actionClock: 0,
+          heroY: 0,
+          hurtClock: 0
+        };
+      }
+
+      function beep(type) {
+        if (!audioCtx) return;
+        const now = audioCtx.currentTime;
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        const settings = {
+          key: [660, 0.035, "square", 0.035],
+          complete: [880, 0.09, "triangle", 0.06],
+          hit: [130, 0.18, "sawtooth", 0.07],
+          start: [440, 0.12, "triangle", 0.05],
+          level: [990, 0.16, "square", 0.045]
+        }[type] || [330, 0.08, "square", 0.04];
+        osc.frequency.setValueAtTime(settings[0], now);
+        osc.type = settings[2];
+        gain.gain.setValueAtTime(settings[3], now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + settings[1]);
+        osc.connect(gain).connect(audioCtx.destination);
+        osc.start(now);
+        osc.stop(now + settings[1]);
+      }
+
+      function pickWord() {
+        const cfg = palettes[state.difficulty];
+        const pool = words.filter(word => word.length >= cfg.wordMin && word.length <= cfg.wordMax);
+        return pool[Math.floor(Math.random() * pool.length)];
+      }
+
+      function spawnEntity(forceX) {
+        const type = Math.random() < 0.52 ? "obstacle" : "enemy";
+        state.entities.push({
+          x: forceX || canvas.width + 80,
+          y: type === "enemy" ? 390 : 412,
+          w: type === "enemy" ? 44 : 38,
+          h: type === "enemy" ? 46 : 34,
+          type,
+          word: pickWord(),
+          done: false,
+          pop: 0
+        });
+      }
+
+      function startGame() {
+        audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+        const selectedDifficulty = state.difficulty;
+        state = makeState();
+        state.difficulty = selectedDifficulty;
+        state.mode = "playing";
+        state.timeLeft = palettes[state.difficulty].time;
+        els.startScreen.hidden = true;
+        els.gameOverScreen.hidden = true;
+        spawnEntity(660);
+        spawnEntity(930);
+        beep("start");
+        updateHud();
+      }
+
+      function endGame(message) {
+        state.mode = "over";
+        els.gameOverText.textContent = message;
+        els.finalScore.textContent = state.score;
+        els.finalWpm.textContent = currentWpm();
+        els.finalAccuracy.textContent = `${currentAccuracy()}%`;
+        els.finalStreak.textContent = state.bestStreak;
+        els.gameOverScreen.hidden = false;
+        beep("hit");
+      }
+
+      function currentTarget() {
+        return state.entities.filter(e => !e.done).sort((a, b) => a.x - b.x)[0];
+      }
+
+      function completeTarget(target) {
+        target.done = true;
+        target.pop = 0.35;
+        state.completedChars += target.word.length;
+        state.streak += 1;
+        state.bestStreak = Math.max(state.bestStreak, state.streak);
+        state.score += target.word.length * 10 + state.streak * 5 + state.level * 8;
+        state.typed = "";
+        state.action = target.type === "enemy" ? "attack" : "jump";
+        state.actionClock = 0.45;
+        if (state.streak > 0 && state.streak % 10 === 0) {
+          state.timeLeft += 5;
+          beep("level");
+        } else {
+          beep("complete");
+        }
+      }
+
+      function failKey() {
+        state.streak = 0;
+        state.score = Math.max(0, state.score - 15);
+        state.hurtClock = 0.25;
+        els.typebar.classList.remove("wrong");
+        void els.typebar.offsetWidth;
+        els.typebar.classList.add("wrong");
+        beep("hit");
+      }
+
+      function handleKey(event) {
+        if (event.key === "Enter" && state.mode !== "playing") {
+          startGame();
+          return;
+        }
+        if (state.mode !== "playing" || event.ctrlKey || event.metaKey || event.altKey) return;
+        if (event.key === "Backspace") {
+          state.typed = state.typed.slice(0, -1);
+          event.preventDefault();
+          return;
+        }
+        if (event.key.length !== 1 || !/[a-z]/i.test(event.key)) return;
+
+        const key = event.key.toLowerCase();
+        const target = currentTarget();
+        state.totalTyped += 1;
+        if (target && target.word[state.typed.length] === key) {
+          state.correctTyped += 1;
+          state.typed += key;
+          beep("key");
+          if (state.typed === target.word) completeTarget(target);
+        } else {
+          failKey();
+        }
+      }
+
+      function currentWpm() {
+        const minutes = Math.max(state.elapsed / 60, 1 / 60);
+        return Math.round((state.completedChars / 5) / minutes);
+      }
+
+      function currentAccuracy() {
+        if (!state.totalTyped) return 100;
+        return Math.max(0, Math.round((state.correctTyped / state.totalTyped) * 100));
+      }
+
+      function updateHud() {
+        els.wpm.textContent = currentWpm();
+        els.accuracy.textContent = `${currentAccuracy()}%`;
+        els.streak.textContent = state.streak;
+        els.timer.textContent = Math.max(0, Math.ceil(state.timeLeft));
+        els.score.textContent = state.score;
+        els.level.textContent = state.level;
+
+        const target = currentTarget();
+        if (!target) {
+          els.typebar.innerHTML = "<span>Keep running...</span>";
+          return;
+        }
+        const typed = target.word.slice(0, state.typed.length);
+        const pending = target.word.slice(state.typed.length);
+        els.typebar.innerHTML = `<span class="typed">${typed}</span><span class="pending">${pending}</span>`;
+      }
+
+      function update(dt) {
+        if (state.mode !== "playing") return;
+        const cfg = palettes[state.difficulty];
+        const speed = cfg.speed + state.level * 12;
+        state.elapsed += dt;
+        state.timeLeft -= dt;
+        state.distance += speed * dt;
+        state.spawnClock += dt;
+        state.actionClock = Math.max(0, state.actionClock - dt);
+        state.hurtClock = Math.max(0, state.hurtClock - dt);
+        if (state.actionClock <= 0) state.action = "run";
+
+        state.level = Math.min(9, 1 + Math.floor(state.elapsed / 18));
+        if (state.spawnClock >= state.nextSpawn) {
+          state.spawnClock = 0;
+          state.nextSpawn = Math.max(0.75, cfg.spawn - state.level * 0.08 + Math.random() * 0.45);
+          spawnEntity();
+        }
+
+        for (const entity of state.entities) {
+          entity.x -= speed * dt;
+          entity.pop = Math.max(0, entity.pop - dt);
+        }
+
+        const danger = currentTarget();
+        if (danger && danger.x < 154 && !danger.done) {
+          endGame(`The word "${danger.word}" reached the hero.`);
+        } else if (state.timeLeft <= 0) {
+          endGame("Time ran out on the road.");
+        }
+
+        state.entities = state.entities.filter(entity => entity.x > -100 && (entity.pop > 0 || !entity.done));
+        updateHud();
+      }
+
+      function pixelRect(x, y, w, h, color) {
+        ctx.fillStyle = color;
+        ctx.fillRect(Math.round(x), Math.round(y), Math.round(w), Math.round(h));
+      }
+
+      function drawBackground(t) {
+        const sky = ctx.createLinearGradient(0, 0, 0, canvas.height);
+        sky.addColorStop(0, "#19335a");
+        sky.addColorStop(0.58, "#32647a");
+        sky.addColorStop(0.59, "#172826");
+        sky.addColorStop(1, "#0b1317");
+        ctx.fillStyle = sky;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        ctx.fillStyle = "#f9d879";
+        ctx.fillRect(752, 58, 36, 36);
+        ctx.fillStyle = "#26395f";
+        for (let i = 0; i < 7; i++) {
+          const x = ((i * 180 - t * 18) % 1160) - 120;
+          pixelRect(x, 260, 160, 90, "#1c3145");
+          pixelRect(x + 50, 220, 82, 40, "#223a50");
+        }
+        for (let i = 0; i < 12; i++) {
+          const x = ((i * 112 - t * 70) % 1100) - 80;
+          pixelRect(x, 378, 28, 66, "#274235");
+          pixelRect(x - 18, 350, 64, 38, "#3a6d44");
+          pixelRect(x - 8, 330, 44, 34, "#4b8953");
+        }
+        pixelRect(0, 444, canvas.width, 96, "#22252b");
+        for (let x = -80 + (Math.floor(-state.distance) % 48); x < canvas.width; x += 48) {
+          pixelRect(x, 444, 44, 10, "#384044");
+          pixelRect(x + 8, 486, 18, 8, "#15191d");
+        }
+      }
+
+      function drawHero(t) {
+        const bob = Math.sin(t * 12) * 3;
+        const jump = state.action === "jump" ? Math.sin((state.actionClock / 0.45) * Math.PI) * 78 : 0;
+        const x = 118;
+        const y = 410 - jump + bob;
+        const flash = state.hurtClock > 0 && Math.floor(t * 22) % 2 === 0;
+        pixelRect(x + 16, y - 58, 26, 22, flash ? "#fff" : "#f0b06b");
+        pixelRect(x + 20, y - 64, 18, 8, "#51313d");
+        pixelRect(x + 12, y - 36, 34, 34, "#2e83c5");
+        pixelRect(x + 8, y - 28, 10, 26, "#f0b06b");
+        pixelRect(x + 42, y - 30, 10, 24, "#f0b06b");
+        pixelRect(x + 16, y - 2, 10, 28, "#394d7a");
+        pixelRect(x + 34, y - 2, 10, 28, "#394d7a");
+        pixelRect(x + 12, y + 22, 18, 8, "#1c2032");
+        pixelRect(x + 32, y + 22, 18, 8, "#1c2032");
+        if (state.action === "attack") {
+          pixelRect(x + 50, y - 38, 58, 6, "#d8edf2");
+          pixelRect(x + 102, y - 42, 10, 14, "#f5c452");
+        }
+      }
+
+      function drawEntity(entity) {
+        if (entity.done) {
+          ctx.globalAlpha = Math.max(0, entity.pop / 0.35);
+          pixelRect(entity.x - 8, entity.y - 52, 72, 22, "#f5c452");
+          ctx.globalAlpha = 1;
+          return;
+        }
+        if (entity.type === "enemy") {
+          pixelRect(entity.x, entity.y - entity.h, entity.w, entity.h, "#86465d");
+          pixelRect(entity.x + 8, entity.y - entity.h - 12, 28, 16, "#ba5c6d");
+          pixelRect(entity.x + 8, entity.y - 30, 8, 8, "#ffdf82");
+          pixelRect(entity.x + 28, entity.y - 30, 8, 8, "#ffdf82");
+          pixelRect(entity.x - 8, entity.y - 18, 12, 12, "#d67a58");
+          pixelRect(entity.x + 40, entity.y - 18, 12, 12, "#d67a58");
+        } else {
+          pixelRect(entity.x, entity.y - entity.h, entity.w, entity.h, "#6b6f7e");
+          pixelRect(entity.x + 8, entity.y - entity.h - 16, 12, 18, "#969ba8");
+          pixelRect(entity.x + 22, entity.y - entity.h - 10, 10, 12, "#969ba8");
+          pixelRect(entity.x + 6, entity.y - 12, 26, 8, "#444955");
+        }
+        drawWordBubble(entity);
+      }
+
+      function drawWordBubble(entity) {
+        ctx.font = "bold 22px Trebuchet MS, sans-serif";
+        ctx.textAlign = "center";
+        const width = Math.max(74, ctx.measureText(entity.word).width + 22);
+        const x = entity.x + entity.w / 2 - width / 2;
+        const y = entity.y - entity.h - 56;
+        pixelRect(x, y, width, 34, "#111827");
+        pixelRect(x + 3, y + 3, width - 6, 28, entity === currentTarget() ? "#37476c" : "#253049");
+        ctx.fillStyle = "#ffe9a6";
+        ctx.fillText(entity.word, entity.x + entity.w / 2, y + 24);
+      }
+
+      function draw() {
+        const t = performance.now() / 1000;
+        drawBackground(t);
+        for (const entity of state.entities) drawEntity(entity);
+        drawHero(t);
+        if (state.mode !== "playing") {
+          ctx.fillStyle = "rgba(0, 0, 0, 0.18)";
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+        }
+      }
+
+      function loop(now) {
+        const dt = Math.min(0.05, (now - last) / 1000);
+        last = now;
+        update(dt);
+        draw();
+        raf = requestAnimationFrame(loop);
+      }
+
+      document.querySelectorAll("[data-difficulty]").forEach(button => {
+        button.addEventListener("click", () => {
+          document.querySelectorAll("[data-difficulty]").forEach(b => b.classList.remove("active"));
+          button.classList.add("active");
+          state.difficulty = button.dataset.difficulty;
+          state.timeLeft = palettes[state.difficulty].time;
+          updateHud();
+        });
+      });
+
+      document.getElementById("startButton").addEventListener("click", startGame);
+      document.getElementById("againButton").addEventListener("click", startGame);
+      window.addEventListener("keydown", handleKey);
+
+      updateHud();
+      spawnEntity(650);
+      spawnEntity(920);
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(loop);
+    })();
+  </script>
+</body>
+</html>
