@@ -322,9 +322,9 @@
       };
 
       const palettes = {
-        easy: { speed: 240, spawn: 1.15, time: 100, wordMin: 3, wordMax: 5 },
-        normal: { speed: 320, spawn: 0.9, time: 90, wordMin: 4, wordMax: 7 },
-        hard: { speed: 420, spawn: 0.675, time: 80, wordMin: 5, wordMax: 9 }
+        easy: { speed: 205, speedLevel: 7, spawn: 1.55, spawnLevel: 0.035, spawnMin: 1.05, time: 105, wordMin: 3, wordMax: 5 },
+        normal: { speed: 275, speedLevel: 9, spawn: 1.2, spawnLevel: 0.045, spawnMin: 0.9, time: 95, wordMin: 4, wordMax: 7 },
+        hard: { speed: 345, speedLevel: 11, spawn: 0.95, spawnLevel: 0.05, spawnMin: 0.78, time: 85, wordMin: 5, wordMax: 8 }
       };
 
       const words = [
@@ -520,7 +520,7 @@
       function update(dt) {
         if (state.mode !== "playing") return;
         const cfg = palettes[state.difficulty];
-        const speed = cfg.speed + state.level * 12;
+        const speed = cfg.speed + state.level * cfg.speedLevel;
         state.elapsed += dt;
         state.timeLeft -= dt;
         state.distance += speed * dt;
@@ -532,7 +532,7 @@
         state.level = Math.min(9, 1 + Math.floor(state.elapsed / 18));
         if (state.spawnClock >= state.nextSpawn) {
           state.spawnClock = 0;
-          state.nextSpawn = Math.max(0.75, cfg.spawn - state.level * 0.08 + Math.random() * 0.45);
+          state.nextSpawn = Math.max(cfg.spawnMin, cfg.spawn - state.level * cfg.spawnLevel + Math.random() * 0.45);
           spawnEntity();
         }
 
