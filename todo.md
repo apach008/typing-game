@@ -26,7 +26,7 @@ To do, ordered by impact (highest first):
   - The original todo gated this on meaningful menu state — with PBs, lifetime stats, drill, settings, and run-mode selection, that bar is now cleared.
   - Behavior: end the run without recording it (or record as abandoned) and return to the start screen.
 
-- [ ] Make Daily mode actually feel daily.
+- [x] Make Daily mode actually feel daily.
   - Seed by UTC date instead of local date so a run is shared across timezones (`index.html:2350`).
   - Persist `dailyResult-YYYY-MM-DD` to localStorage and show "Today's score: X — come back tomorrow" on the start screen when set, with a one-tap copy of a shareable string ("TypeQuest Daily 2026-04-30 · 78 NetWPM · 96%").
   - Track and display a daily streak counter; missing a day resets it. Streaks are the entire reason daily modes exist.

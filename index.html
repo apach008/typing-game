@@ -451,6 +451,50 @@
       gap: 6px;
     }
 
+    .daily-panel {
+      margin: 16px 0;
+      border: 1px solid #404d70;
+      background: #10172a;
+      padding: 12px;
+    }
+
+    .daily-panel h2 {
+      margin: 0 0 6px;
+      color: #ffe28b;
+      font-size: 18px;
+      line-height: 1.1;
+      text-shadow: none;
+    }
+
+    .daily-panel p {
+      margin: 0 0 10px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.3;
+    }
+
+    .daily-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 6px;
+    }
+
+    #dailyShareButton {
+      margin-top: 10px;
+      width: 100%;
+      padding: 10px;
+      font-size: 13px;
+    }
+
+    .daily-share-status {
+      display: block;
+      margin-top: 6px;
+      min-height: 14px;
+      color: #ffe28b;
+      font-size: 11px;
+      text-align: center;
+    }
+
     .letter-heatmap {
       display: grid;
       grid-template-columns: repeat(13, 1fr);
@@ -459,7 +503,8 @@
     }
 
     .best-stat,
-    .lifetime-stat {
+    .lifetime-stat,
+    .daily-stat {
       min-width: 0;
       background: #202942;
       border: 1px solid #34415f;
@@ -467,7 +512,8 @@
     }
 
     .best-stat span,
-    .lifetime-stat span {
+    .lifetime-stat span,
+    .daily-stat span {
       display: block;
       color: var(--muted);
       font-size: 10px;
@@ -476,7 +522,8 @@
     }
 
     .best-stat strong,
-    .lifetime-stat strong {
+    .lifetime-stat strong,
+    .daily-stat strong {
       display: block;
       margin-top: 3px;
       font-size: 18px;
@@ -700,6 +747,18 @@
             <button data-run-mode="adventure">Adventure</button>
             <button data-run-mode="daily">Daily</button>
           </div>
+          <section class="daily-panel" id="dailyPanel" aria-labelledby="dailyTitle" hidden>
+            <h2 id="dailyTitle">Today's Daily</h2>
+            <p id="dailyStatus">Daily challenge ready &mdash; same seed for every player today.</p>
+            <div class="daily-grid">
+              <div class="daily-stat"><span>Today's Score</span><strong id="dailyTodayScore">-</strong></div>
+              <div class="daily-stat"><span>Net WPM</span><strong id="dailyTodayNetWpm">-</strong></div>
+              <div class="daily-stat"><span>Accuracy</span><strong id="dailyTodayAccuracy">-</strong></div>
+              <div class="daily-stat"><span>Streak</span><strong id="dailyStreak">0</strong></div>
+            </div>
+            <button id="dailyShareButton" type="button" hidden>Copy share string</button>
+            <span class="daily-share-status" id="dailyShareStatus" aria-live="polite"></span>
+          </section>
           <div class="difficulty" role="group" aria-label="Difficulty">
             <button class="active" data-difficulty="easy">
               <span class="difficulty-label">Easy</span>
@@ -938,6 +997,14 @@
         drillSuggestions: document.getElementById("drillSuggestions"),
         drillInput: document.getElementById("drillInput"),
         drillStatus: document.getElementById("drillStatus"),
+        dailyPanel: document.getElementById("dailyPanel"),
+        dailyStatus: document.getElementById("dailyStatus"),
+        dailyTodayScore: document.getElementById("dailyTodayScore"),
+        dailyTodayNetWpm: document.getElementById("dailyTodayNetWpm"),
+        dailyTodayAccuracy: document.getElementById("dailyTodayAccuracy"),
+        dailyStreak: document.getElementById("dailyStreak"),
+        dailyShareButton: document.getElementById("dailyShareButton"),
+        dailyShareStatus: document.getElementById("dailyShareStatus"),
         newBestBanner: document.getElementById("newBestBanner"),
         gameOverText: document.getElementById("gameOverText"),
         startSettingsButton: document.getElementById("startSettingsButton"),
@@ -1515,6 +1582,7 @@
       const DEFAULT_DIFFICULTY_KEY = "typequest-default-difficulty-v1";
       const DEFAULT_TYPING_MODE_KEY = "typequest-default-typing-mode-v1";
       const ONBOARDING_SEEN_KEY = "typequest-onboarding-seen-v1";
+      const DAILY_HISTORY_KEY = "typequest-daily-history-v1";
       const KEYPRESS_SOUND_THEMES = ["mechanical", "soft", "none"];
       const DIFFICULTIES = ["easy", "normal", "hard"];
       const TYPING_MODE_KEYS = ["beginner", "advanced", "expert"];
@@ -1775,6 +1843,63 @@
         updateDrillSuggestions(stats);
       }
 
+      function updateDailyDisplay() {
+        if (!els.dailyPanel) return;
+        const isDaily = runModes[state.runMode].daily;
+        els.dailyPanel.hidden = !isDaily;
+        const history = readDailyHistory();
+        const today = dailyDateStamp();
+        const todayResult = history.results[today];
+        const streak = activeDailyStreak(history);
+        els.dailyStreak.textContent = streak;
+        if (todayResult) {
+          els.dailyStatus.textContent = `Today's run logged. Come back tomorrow for a new seed.`;
+          els.dailyTodayScore.textContent = todayResult.score;
+          els.dailyTodayNetWpm.textContent = todayResult.netWpm;
+          els.dailyTodayAccuracy.textContent = `${todayResult.accuracy}%`;
+          els.dailyShareButton.hidden = false;
+          els.dailyShareButton.dataset.shareString = dailyShareString(todayResult);
+        } else {
+          els.dailyStatus.textContent = `Today's daily seed (${today}) is ready. Same words for every player today.`;
+          els.dailyTodayScore.textContent = "-";
+          els.dailyTodayNetWpm.textContent = "-";
+          els.dailyTodayAccuracy.textContent = "-";
+          els.dailyShareButton.hidden = true;
+          delete els.dailyShareButton.dataset.shareString;
+        }
+        if (els.dailyShareStatus) els.dailyShareStatus.textContent = "";
+      }
+
+      function copyDailyShareString() {
+        const text = els.dailyShareButton.dataset.shareString;
+        if (!text) return;
+        const showStatus = success => {
+          els.dailyShareStatus.textContent = success ? "Copied to clipboard." : "Couldn't copy. Select and copy manually.";
+        };
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(text).then(() => showStatus(true), () => fallbackCopy(text, showStatus));
+        } else {
+          fallbackCopy(text, showStatus);
+        }
+      }
+
+      function fallbackCopy(text, done) {
+        try {
+          const ta = document.createElement("textarea");
+          ta.value = text;
+          ta.setAttribute("readonly", "");
+          ta.style.position = "absolute";
+          ta.style.left = "-9999px";
+          document.body.appendChild(ta);
+          ta.select();
+          const ok = document.execCommand("copy");
+          document.body.removeChild(ta);
+          done(ok);
+        } catch (error) {
+          done(false);
+        }
+      }
+
       function normalizeDrillTarget(value) {
         return value.toLowerCase().replace(/[^a-z]/g, "").slice(0, 2);
       }
@@ -1844,6 +1969,64 @@
 
         writeLifetimeStats(next);
         return next;
+      }
+
+      function emptyDailyHistory() {
+        return { results: {}, streak: 0, lastPlayedDate: "" };
+      }
+
+      function readDailyHistory() {
+        try {
+          const stored = window.localStorage.getItem(DAILY_HISTORY_KEY);
+          const parsed = stored ? JSON.parse(stored) : null;
+          if (!parsed || typeof parsed !== "object") return emptyDailyHistory();
+          return {
+            ...emptyDailyHistory(),
+            ...parsed,
+            results: parsed.results && typeof parsed.results === "object" ? parsed.results : {},
+            streak: Number.isFinite(parsed.streak) ? parsed.streak : 0,
+            lastPlayedDate: typeof parsed.lastPlayedDate === "string" ? parsed.lastPlayedDate : ""
+          };
+        } catch (error) {
+          return emptyDailyHistory();
+        }
+      }
+
+      function writeDailyHistory(history) {
+        try {
+          window.localStorage.setItem(DAILY_HISTORY_KEY, JSON.stringify(history));
+        } catch (error) {
+          return false;
+        }
+        return true;
+      }
+
+      function recordDailyResult(result) {
+        const history = readDailyHistory();
+        const today = dailyDateStamp();
+        const existing = history.results[today];
+        if (!existing || result.netWpm > (existing.netWpm || 0)) {
+          history.results[today] = { ...result, date: today };
+        }
+        if (history.lastPlayedDate !== today) {
+          history.streak = history.lastPlayedDate === priorDailyDateStamp(today)
+            ? (history.streak || 0) + 1
+            : 1;
+          history.lastPlayedDate = today;
+        }
+        writeDailyHistory(history);
+        return history;
+      }
+
+      function activeDailyStreak(history) {
+        const today = dailyDateStamp();
+        if (history.lastPlayedDate === today) return history.streak;
+        if (history.lastPlayedDate === priorDailyDateStamp(today)) return history.streak;
+        return 0;
+      }
+
+      function dailyShareString(result) {
+        return `TypeQuest Daily ${result.date} (${difficultyLabel(result.difficulty)}) · ${result.netWpm} NetWPM · ${result.accuracy}%`;
       }
 
       function readSoundMuted() {
@@ -2427,6 +2610,17 @@
           streak: state.bestStreak,
           score: state.score
         });
+        if (runModes[state.runMode].daily) {
+          recordDailyResult({
+            netWpm: finalNetWpm,
+            rawWpm: finalRawWpm,
+            accuracy: finalAccuracy,
+            score: state.score,
+            streak: state.bestStreak,
+            difficulty: state.difficulty
+          });
+          updateDailyDisplay();
+        }
 
         document.querySelector("#gameOverScreen h2").textContent = won ? "Victory" : "Game Over";
         els.gameOverText.textContent = message;
@@ -2457,11 +2651,23 @@
         return state.rngState / 0x100000000;
       }
 
+      function dailyDateStamp(date = new Date()) {
+        const y = date.getUTCFullYear();
+        const m = String(date.getUTCMonth() + 1).padStart(2, "0");
+        const d = String(date.getUTCDate()).padStart(2, "0");
+        return `${y}-${m}-${d}`;
+      }
+
+      function priorDailyDateStamp(stamp) {
+        const [y, m, d] = stamp.split("-").map(Number);
+        const date = new Date(Date.UTC(y, m - 1, d));
+        date.setUTCDate(date.getUTCDate() - 1);
+        return dailyDateStamp(date);
+      }
+
       function dailySeed() {
-        const today = new Date();
-        const stamp = `${today.getFullYear()}-${today.getMonth() + 1}-${today.getDate()}`;
         let seed = 2166136261;
-        const key = `${stamp}-${state.difficulty}`;
+        const key = `${dailyDateStamp()}-${state.difficulty}`;
         for (let i = 0; i < key.length; i++) {
           seed ^= key.charCodeAt(i);
           seed = Math.imul(seed, 16777619);
@@ -3577,8 +3783,11 @@
           state.runMode = button.dataset.runMode;
           state.timeLeft = runModes[state.runMode].timed ? palettes[state.difficulty].time : Infinity;
           updateHud();
+          updateDailyDisplay();
         });
       });
+
+      els.dailyShareButton.addEventListener("click", copyDailyShareString);
 
       document.querySelectorAll("[data-typing-mode]").forEach(button => {
         button.addEventListener("click", () => setTypingMode(button.dataset.typingMode));
@@ -3632,6 +3841,7 @@
       updateHud();
       updatePersonalBestsDisplay();
       updateLifetimeStatsDisplay();
+      updateDailyDisplay();
       spawnEntity(650);
       spawnEntity(920);
       if (!readOnboardingSeen()) showOnboarding();
