@@ -38,7 +38,7 @@
   - Enemies: combat words like `slash`, `strike`, `guard`, `blast`.
   - Treasure/powerups: reward words like `gold`, `bonus`, `haste`.
 
-- [ ] Add more entity types.
+- [x] Add more entity types.
   - Flying enemies that require typing before they dive.
   - Shielded enemies that require two short words.
   - Crumbling bridges that use longer timing windows.

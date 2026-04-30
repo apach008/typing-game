@@ -344,6 +344,15 @@
         ]
       };
 
+      const entityKinds = {
+        obstacle: { type: "obstacle", weight: 34, y: 412, w: 38, h: 34, timingScale: 1, scoreScale: 1 },
+        enemy: { type: "enemy", weight: 30, y: 390, w: 44, h: 46, timingScale: 1, scoreScale: 1 },
+        flying: { type: "flying", category: "enemy", weight: 12, y: 292, w: 48, h: 34, timingScale: 1.12, scoreScale: 1.15 },
+        shielded: { type: "shielded", category: "enemy", weight: 10, y: 390, w: 52, h: 50, timingScale: 1.35, scoreScale: 1.35, wordCount: 2 },
+        bridge: { type: "bridge", category: "obstacle", weight: 8, y: 428, w: 86, h: 24, timingScale: 1.55, scoreScale: 1.15 },
+        chest: { type: "chest", category: "treasure", weight: 6, y: 412, w: 46, h: 34, timingScale: 1.1, scoreScale: 1.65, optional: true }
+      };
+
       const COUNTDOWN_SECONDS = 3;
       const STARTING_HEARTS = 3;
       const WARMUP_SECONDS = 10;
@@ -417,6 +426,17 @@
         return eligibleWords[Math.floor(Math.random() * eligibleWords.length)];
       }
 
+      function pickEntityKind() {
+        const kinds = Object.values(entityKinds);
+        const totalWeight = kinds.reduce((sum, kind) => sum + kind.weight, 0);
+        let roll = Math.random() * totalWeight;
+        for (const kind of kinds) {
+          roll -= kind.weight;
+          if (roll <= 0) return kind;
+        }
+        return entityKinds.obstacle;
+      }
+
       function currentSpeed() {
         const cfg = palettes[state.difficulty];
         return (cfg.speed + state.level * cfg.speedLevel) * warmupSpeedFactor();
@@ -434,15 +454,15 @@
         return WARMUP_START_SPAWN_FACTOR - (WARMUP_START_SPAWN_FACTOR - 1) * warmupProgress();
       }
 
-      function spacingForWord(word, speed) {
-        const secondsToType = (0.36 + word.length * 0.22) * DIFFICULTY_REACTION_BUFFER[state.difficulty];
+      function spacingForWord(word, speed, timingScale = 1) {
+        const secondsToType = (0.36 + word.length * 0.22) * DIFFICULTY_REACTION_BUFFER[state.difficulty] * timingScale;
         return Math.round(74 + speed * secondsToType);
       }
 
-      function nextSpawnX(word, preferredX) {
+      function nextSpawnX(word, preferredX, timingScale) {
         const speed = currentSpeed();
         const requestedX = preferredX || BASE_SPAWN_X;
-        const requiredSpacing = spacingForWord(word, speed);
+        const requiredSpacing = spacingForWord(word, speed, timingScale);
         const nearestAhead = state.entities
           .filter(entity => !entity.done && entity.x > HERO_HIT_X)
           .reduce((rightmost, entity) => Math.max(rightmost, entity.x), requestedX - requiredSpacing);
@@ -450,15 +470,22 @@
       }
 
       function spawnEntity(forceX) {
-        const type = Math.random() < 0.52 ? "obstacle" : "enemy";
-        const word = pickWord(type);
+        const kind = pickEntityKind();
+        const category = kind.category || kind.type;
+        const words = Array.from({ length: kind.wordCount || 1 }, () => pickWord(category));
+        const word = words[0];
         state.entities.push({
-          x: nextSpawnX(word, forceX),
-          y: type === "enemy" ? 390 : 412,
-          w: type === "enemy" ? 44 : 38,
-          h: type === "enemy" ? 46 : 34,
-          type,
+          x: nextSpawnX(words.join(""), forceX, kind.timingScale),
+          y: kind.y,
+          w: kind.w,
+          h: kind.h,
+          type: kind.type,
+          category,
           word,
+          words,
+          wordIndex: 0,
+          optional: Boolean(kind.optional),
+          scoreScale: kind.scoreScale,
           done: false,
           pop: 0
         });
@@ -496,14 +523,27 @@
       }
 
       function completeTarget(target) {
+        if (target.wordIndex < target.words.length - 1) {
+          target.wordIndex += 1;
+          target.word = target.words[target.wordIndex];
+          state.completedChars += state.typed.length;
+          state.typed = "";
+          state.action = "attack";
+          state.actionClock = 0.28;
+          beep("complete");
+          return;
+        }
+
         target.done = true;
         target.pop = 0.35;
         state.completedChars += target.word.length;
         state.streak += 1;
         state.bestStreak = Math.max(state.bestStreak, state.streak);
-        state.score += target.word.length * 10 + state.streak * 5 + state.level * 8;
+        const completedLength = target.words.reduce((sum, word) => sum + word.length, 0);
+        const baseScore = completedLength * 10 + state.streak * 5 + state.level * 8;
+        state.score += Math.round(baseScore * target.scoreScale);
         state.typed = "";
-        state.action = target.type === "enemy" ? "attack" : "jump";
+        state.action = target.category === "enemy" || target.type === "flying" || target.type === "shielded" ? "attack" : "jump";
         state.actionClock = 0.45;
         if (state.streak > 0 && state.streak % 10 === 0) {
           state.timeLeft += 5;
@@ -526,6 +566,10 @@
       function missTarget(target) {
         target.done = true;
         target.pop = 0;
+        if (target.optional) {
+          state.typed = "";
+          return;
+        }
         state.hearts -= 1;
         state.streak = 0;
         state.typed = "";
@@ -703,7 +747,7 @@
       function drawEntity(entity) {
         if (entity.done) {
           ctx.globalAlpha = Math.max(0, entity.pop / 0.35);
-          pixelRect(entity.x - 8, entity.y - 52, 72, 22, "#f5c452");
+          pixelRect(entity.x - 8, entity.y - 52, 72, 22, entity.optional ? "#8ff0ff" : "#f5c452");
           ctx.globalAlpha = 1;
           return;
         }
@@ -714,6 +758,33 @@
           pixelRect(entity.x + 28, entity.y - 30, 8, 8, "#ffdf82");
           pixelRect(entity.x - 8, entity.y - 18, 12, 12, "#d67a58");
           pixelRect(entity.x + 40, entity.y - 18, 12, 12, "#d67a58");
+        } else if (entity.type === "flying") {
+          const dive = Math.max(0, 1 - (entity.x - HERO_HIT_X) / 520);
+          const y = entity.y + dive * 86;
+          pixelRect(entity.x + 4, y - entity.h, entity.w - 8, entity.h, "#70417b");
+          pixelRect(entity.x - 10, y - entity.h + 8, 18, 12, "#b9658f");
+          pixelRect(entity.x + 40, y - entity.h + 8, 18, 12, "#b9658f");
+          pixelRect(entity.x + 15, y - entity.h - 8, 18, 10, "#d783a8");
+          pixelRect(entity.x + 16, y - 21, 6, 6, "#ffe68a");
+          pixelRect(entity.x + 28, y - 21, 6, 6, "#ffe68a");
+        } else if (entity.type === "shielded") {
+          pixelRect(entity.x, entity.y - entity.h, entity.w, entity.h, "#5f486a");
+          pixelRect(entity.x + 7, entity.y - entity.h - 10, 30, 15, "#aa6470");
+          pixelRect(entity.x + 27, entity.y - 42, 24, 34, "#9fb0c9");
+          pixelRect(entity.x + 31, entity.y - 36, 16, 22, "#52627e");
+          pixelRect(entity.x + 10, entity.y - 27, 7, 7, "#ffdf82");
+          pixelRect(entity.x - 8, entity.y - 18, 12, 12, "#d67a58");
+        } else if (entity.type === "bridge") {
+          pixelRect(entity.x, entity.y - entity.h, entity.w, entity.h, "#7b5a38");
+          pixelRect(entity.x + 6, entity.y - entity.h + 5, entity.w - 12, 5, "#c19456");
+          pixelRect(entity.x + 16, entity.y - entity.h, 6, entity.h, "#3d2c24");
+          pixelRect(entity.x + 42, entity.y - entity.h, 6, entity.h, "#3d2c24");
+          pixelRect(entity.x + 66, entity.y - entity.h, 6, entity.h, "#3d2c24");
+        } else if (entity.type === "chest") {
+          pixelRect(entity.x, entity.y - entity.h, entity.w, entity.h, "#8f563b");
+          pixelRect(entity.x + 4, entity.y - entity.h - 8, entity.w - 8, 14, "#d09a4c");
+          pixelRect(entity.x + 3, entity.y - 22, entity.w - 6, 5, "#f5c452");
+          pixelRect(entity.x + 19, entity.y - 25, 9, 13, "#ffe28b");
         } else {
           pixelRect(entity.x, entity.y - entity.h, entity.w, entity.h, "#6b6f7e");
           pixelRect(entity.x + 8, entity.y - entity.h - 16, 12, 18, "#969ba8");
@@ -726,13 +797,15 @@
       function drawWordBubble(entity) {
         ctx.font = "bold 22px Trebuchet MS, sans-serif";
         ctx.textAlign = "center";
-        const width = Math.max(74, ctx.measureText(entity.word).width + 22);
+        const progress = entity.words.length > 1 ? `${entity.wordIndex + 1}/${entity.words.length} ` : "";
+        const label = `${progress}${entity.word}`;
+        const width = Math.max(74, ctx.measureText(label).width + 22);
         const x = entity.x + entity.w / 2 - width / 2;
         const y = entity.y - entity.h - 56;
         pixelRect(x, y, width, 34, "#111827");
-        pixelRect(x + 3, y + 3, width - 6, 28, entity === currentTarget() ? "#37476c" : "#253049");
-        ctx.fillStyle = "#ffe9a6";
-        ctx.fillText(entity.word, entity.x + entity.w / 2, y + 24);
+        pixelRect(x + 3, y + 3, width - 6, 28, entity === currentTarget() ? "#37476c" : entity.optional ? "#26485a" : "#253049");
+        ctx.fillStyle = entity.optional ? "#b9fbff" : "#ffe9a6";
+        ctx.fillText(label, entity.x + entity.w / 2, y + 24);
       }
 
       function draw() {
