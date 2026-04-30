@@ -7,7 +7,7 @@ To do, ordered by impact (highest first):
   - Show on the start screen; flash a "New Best!" banner on the game-over screen when beaten.
   - This is what turns a one-off game into a trainer. Highest-impact remaining item.
 
-- [ ] Add a pause menu.
+- [x] Add a pause menu.
   - `Esc` pauses. Show Resume and Restart only — no "Exit to Menu" until there is a meaningful menu state to return to.
   - Practice sessions get interrupted by every notification and tab switch; without pause the run is just lost.
 

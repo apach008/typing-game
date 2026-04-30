@@ -176,6 +176,11 @@
       color: #f6ffe8;
     }
 
+    #pauseScreen button {
+      width: 100%;
+      margin-top: 8px;
+    }
+
     .best-panel {
       margin: 16px 0;
       border: 1px solid #404d70;
@@ -423,6 +428,14 @@
           <button class="primary" id="againButton">Run Again</button>
         </div>
       </div>
+
+      <div class="overlay" id="pauseScreen" hidden>
+        <div class="menu">
+          <h2>Paused</h2>
+          <button class="primary" id="resumeButton">Resume</button>
+          <button id="restartButton">Restart</button>
+        </div>
+      </div>
     </section>
   </main>
 
@@ -442,6 +455,7 @@
         typebar: document.getElementById("typebar"),
         startScreen: document.getElementById("startScreen"),
         gameOverScreen: document.getElementById("gameOverScreen"),
+        pauseScreen: document.getElementById("pauseScreen"),
         finalScore: document.getElementById("finalScore"),
         finalRawWpm: document.getElementById("finalRawWpm"),
         finalNetWpm: document.getElementById("finalNetWpm"),
@@ -1465,9 +1479,24 @@
         state.countdown = COUNTDOWN_SECONDS;
         els.startScreen.hidden = true;
         els.gameOverScreen.hidden = true;
+        els.pauseScreen.hidden = true;
         spawnEntity(660);
         spawnEntity(930);
         beep("start");
+        updateHud();
+      }
+
+      function pauseGame() {
+        if (state.mode !== "playing") return;
+        state.mode = "paused";
+        els.pauseScreen.hidden = false;
+        document.getElementById("resumeButton").focus();
+      }
+
+      function resumeGame() {
+        if (state.mode !== "paused") return;
+        state.mode = "playing";
+        els.pauseScreen.hidden = true;
         updateHud();
       }
 
@@ -1503,6 +1532,7 @@
         els.newBestBanner.hidden = !improvedBests.length;
         els.newBestBanner.textContent = improvedBests.length ? `New Best! ${improvedBests.join(", ")}` : "New Best!";
         updatePersonalBestsDisplay();
+        els.pauseScreen.hidden = true;
         els.gameOverScreen.hidden = false;
         beep(won ? "level" : "hit");
       }
@@ -1720,7 +1750,17 @@
       }
 
       function handleKey(event) {
-        if (event.key === "Enter" && state.mode !== "playing") {
+        if (event.key === "Escape") {
+          if (state.mode === "playing") {
+            pauseGame();
+            event.preventDefault();
+          } else if (state.mode === "paused") {
+            resumeGame();
+            event.preventDefault();
+          }
+          return;
+        }
+        if (event.key === "Enter" && (state.mode === "menu" || state.mode === "over")) {
           startGame();
           return;
         }
@@ -2506,6 +2546,8 @@
 
       document.getElementById("startButton").addEventListener("click", startGame);
       document.getElementById("againButton").addEventListener("click", startGame);
+      document.getElementById("resumeButton").addEventListener("click", resumeGame);
+      document.getElementById("restartButton").addEventListener("click", startGame);
       window.addEventListener("keydown", handleKey);
 
       updateHud();
