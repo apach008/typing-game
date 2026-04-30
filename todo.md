@@ -49,7 +49,7 @@ To do, ordered by impact (highest first):
   - Surface as an unobtrusive corner toast during play and a checklist on the start screen.
   - Cheap to implement, very high engagement leverage; gives early players a reason to come back tomorrow.
 
-- [ ] Persist recent run history (last 10 runs).
+- [x] Persist recent run history (last 10 runs).
   - Date, mode, difficulty, net WPM, accuracy, streak. Show as a compact list under the lifetime panel.
   - PBs alone hide the trend ("am I getting faster or just lucky on one run?"); recent runs answer that.
 

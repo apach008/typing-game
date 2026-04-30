@@ -456,6 +456,65 @@
       gap: 6px;
     }
 
+    .recent-runs {
+      margin-top: 12px;
+    }
+
+    .recent-runs h3 {
+      margin: 0 0 8px;
+      color: #ffe28b;
+      font-size: 14px;
+      line-height: 1.15;
+      text-transform: uppercase;
+      text-shadow: none;
+    }
+
+    .recent-run-list {
+      display: grid;
+      gap: 6px;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .recent-run {
+      display: grid;
+      grid-template-columns: minmax(96px, 1.2fr) minmax(100px, 1fr) repeat(3, minmax(52px, 0.7fr));
+      gap: 6px;
+      align-items: center;
+      border: 1px solid #34415f;
+      background: #202942;
+      padding: 8px;
+      font-size: 12px;
+      line-height: 1.2;
+    }
+
+    .recent-run.empty {
+      display: block;
+      color: var(--muted);
+    }
+
+    .recent-run-date,
+    .recent-run-mode {
+      min-width: 0;
+    }
+
+    .recent-run-date {
+      color: #f7f2df;
+      font-weight: 800;
+    }
+
+    .recent-run-mode {
+      color: #ddd5b5;
+    }
+
+    .recent-run-metric {
+      color: #f7f2df;
+      font-weight: 800;
+      text-align: right;
+      white-space: nowrap;
+    }
+
     .achievement-panel {
       margin: 16px 0;
       border: 1px solid #404d70;
@@ -843,6 +902,14 @@
         grid-template-columns: 1fr;
       }
 
+      .recent-run {
+        grid-template-columns: 1fr 1fr;
+      }
+
+      .recent-run-metric {
+        text-align: left;
+      }
+
       .drill-custom {
         grid-template-columns: 1fr;
       }
@@ -943,6 +1010,10 @@
               <div class="lifetime-stat"><span>Weak Bigrams</span><strong id="lifetimeWeakBigrams">None</strong></div>
             </div>
             <div class="letter-heatmap" id="lifetimeHeatmap" aria-label="Lifetime letter mistake heatmap"></div>
+            <div class="recent-runs" aria-labelledby="recentRunsTitle">
+              <h3 id="recentRunsTitle">Recent Runs</h3>
+              <ul class="recent-run-list" id="recentRunList"></ul>
+            </div>
           </section>
           <section class="achievement-panel" aria-labelledby="achievementTitle">
             <h2 id="achievementTitle">Achievements</h2>
@@ -1137,6 +1208,7 @@
         lifetimeWeakLetters: document.getElementById("lifetimeWeakLetters"),
         lifetimeWeakBigrams: document.getElementById("lifetimeWeakBigrams"),
         lifetimeHeatmap: document.getElementById("lifetimeHeatmap"),
+        recentRunList: document.getElementById("recentRunList"),
         achievementList: document.getElementById("achievementList"),
         achievementToasts: document.getElementById("achievementToasts"),
         drillSuggestions: document.getElementById("drillSuggestions"),
@@ -1789,6 +1861,7 @@
       };
       const PERSONAL_BESTS_KEY = "typequest-personal-bests-v1";
       const LIFETIME_STATS_KEY = "typequest-lifetime-stats-v1";
+      const RECENT_RUNS_KEY = "typequest-recent-runs-v1";
       const SOUND_MUTED_KEY = "typequest-sound-muted-v1";
       const KEYPRESS_SOUND_THEME_KEY = "typequest-keypress-sound-theme-v1";
       const DEFAULT_DIFFICULTY_KEY = "typequest-default-difficulty-v1";
@@ -1796,6 +1869,7 @@
       const ONBOARDING_SEEN_KEY = "typequest-onboarding-seen-v1";
       const DAILY_HISTORY_KEY = "typequest-daily-history-v1";
       const ACHIEVEMENTS_KEY = "typequest-achievements-v1";
+      const RECENT_RUN_LIMIT = 10;
       const KEYPRESS_SOUND_THEMES = ["mechanical", "soft", "none"];
       const DIFFICULTIES = ["easy", "normal", "hard"];
       const TYPING_MODE_KEYS = ["beginner", "advanced", "expert"];
@@ -2105,6 +2179,53 @@
         return true;
       }
 
+      function normalizeRecentRun(run) {
+        if (!run || typeof run !== "object") return null;
+        const date = typeof run.date === "string" ? run.date : "";
+        const mode = typeof run.mode === "string" && runModes[run.mode] ? run.mode : "endless";
+        const difficulty = DIFFICULTIES.includes(run.difficulty) ? run.difficulty : "easy";
+        const netWpm = Number.isFinite(run.netWpm) ? Math.max(0, Math.round(run.netWpm)) : 0;
+        const accuracy = Number.isFinite(run.accuracy) ? Math.max(0, Math.min(100, Math.round(run.accuracy))) : 0;
+        const streak = Number.isFinite(run.streak) ? Math.max(0, Math.round(run.streak)) : 0;
+        return { date, mode, difficulty, netWpm, accuracy, streak };
+      }
+
+      function readRecentRuns() {
+        try {
+          const stored = window.localStorage.getItem(RECENT_RUNS_KEY);
+          const parsed = stored ? JSON.parse(stored) : [];
+          if (!Array.isArray(parsed)) return [];
+          return parsed
+            .map(normalizeRecentRun)
+            .filter(Boolean)
+            .slice(0, RECENT_RUN_LIMIT);
+        } catch (error) {
+          return [];
+        }
+      }
+
+      function writeRecentRuns(runs) {
+        try {
+          window.localStorage.setItem(RECENT_RUNS_KEY, JSON.stringify(runs.slice(0, RECENT_RUN_LIMIT)));
+        } catch (error) {
+          return false;
+        }
+        return true;
+      }
+
+      function recordRecentRun(result) {
+        const run = normalizeRecentRun({
+          date: new Date().toISOString(),
+          mode: state.runMode,
+          difficulty: state.difficulty,
+          ...result
+        });
+        if (!run) return [];
+        const runs = [run, ...readRecentRuns()].slice(0, RECENT_RUN_LIMIT);
+        writeRecentRuns(runs);
+        return runs;
+      }
+
       function topMistakeLetters(letterMistakes) {
         return Object.entries(letterMistakes)
           .filter(([letter, count]) => /^[a-z]$/.test(letter) && count > 0)
@@ -2132,6 +2253,12 @@
         return minutes ? `${hours}h ${minutes}m` : `${hours}h`;
       }
 
+      function formatRunDate(dateString) {
+        const date = new Date(dateString);
+        if (Number.isNaN(date.getTime())) return "Unknown";
+        return date.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+      }
+
       function renderLifetimeHeatmap(letterMistakes) {
         const maxMistakes = Math.max(0, ...LETTERS.map(letter => letterMistakes[letter] || 0));
         els.lifetimeHeatmap.innerHTML = LETTERS.map(letter => {
@@ -2154,6 +2281,24 @@
         els.lifetimeWeakBigrams.textContent = weakBigrams.length ? weakBigrams.join(", ") : "None";
         renderLifetimeHeatmap(stats.letterMistakes);
         updateDrillSuggestions(stats);
+        updateRecentRunsDisplay();
+      }
+
+      function updateRecentRunsDisplay(runs = readRecentRuns()) {
+        if (!els.recentRunList) return;
+        if (!runs.length) {
+          els.recentRunList.innerHTML = `<li class="recent-run empty">No runs yet.</li>`;
+          return;
+        }
+        els.recentRunList.innerHTML = runs.map(run => `
+          <li class="recent-run">
+            <span class="recent-run-date">${escapeHtml(formatRunDate(run.date))}</span>
+            <span class="recent-run-mode">${escapeHtml(runModes[run.mode].label)} / ${escapeHtml(difficultyLabel(run.difficulty))}</span>
+            <span class="recent-run-metric">${run.netWpm} WPM</span>
+            <span class="recent-run-metric">${run.accuracy}%</span>
+            <span class="recent-run-metric">${run.streak} streak</span>
+          </li>
+        `).join("");
       }
 
       function updateDailyDisplay() {
@@ -3028,6 +3173,11 @@
           state.samples.push({ t: state.elapsed, netWpm: finalNetWpm, accuracy: finalAccuracy });
         }
         recordLifetimeStats();
+        recordRecentRun({
+          netWpm: finalNetWpm,
+          accuracy: finalAccuracy,
+          streak: state.bestStreak
+        });
         const hadPersonalBest = hasExistingPersonalBest(state.difficulty);
         const improvedBests = recordPersonalBests(state.difficulty, {
           netWpm: finalNetWpm,
