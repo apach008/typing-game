@@ -53,7 +53,7 @@ To do, ordered by impact (highest first):
   - Keep: keypress tick, word complete, typo error.
   - Drop the sword / jump / damage / level-up / game-over flavor sounds — those serve the action skin, not the typing practice.
 
-- [ ] Add a favicon and page metadata.
+- [x] Add a favicon and page metadata.
   - Small pixel key/sword icon, `<title>`, and a basic `<meta name="description">` / `og:title` for shareable links.
 
 - [ ] Add a "best on desktop" notice for touch devices.
