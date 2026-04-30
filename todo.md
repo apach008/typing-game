@@ -220,34 +220,7 @@
   - Keep entities ordered by spawn position or cache current target.
   - Current list is small, but this becomes cleaner as mechanics grow.
 
-- [ ] Escape dynamic word HTML defensively.
-  - The current word list is static and safe.
-  - If custom word lists are added, `innerHTML` should not receive raw words.
-
-- [ ] Add a small debug overlay.
-  - FPS.
-  - Entity count.
-  - Current speed.
-  - Spawn interval.
-  - Current seed.
-
 ## Priority 7: Content
-
-- [ ] Expand the word list substantially.
-  - At least 100 words per difficulty band.
-  - Avoid repeated words in short sessions.
-
-- [ ] Add theme-specific word banks.
-  - Forest: `branch`, `moss`, `thorn`, `glade`.
-  - Ruins: `relic`, `pillar`, `glyph`, `temple`.
-  - Lava: `magma`, `ember`, `ashfall`, `forge`.
-  - Castle: `banner`, `turret`, `crown`, `guard`.
-
-- [ ] Add optional educational word packs.
-  - Common English words.
-  - Programming terms.
-  - SAT vocabulary.
-  - User-provided custom list.
 
 - [ ] Add phrase mode.
   - Short phrases for advanced players.
