@@ -334,6 +334,8 @@
         "anchor", "charge", "swift", "secret", "keeper", "phantom", "summit", "hammer", "legend"
       ];
 
+      const COUNTDOWN_SECONDS = 3;
+
       let audioCtx;
       let state = makeState();
       let last = performance.now();
@@ -345,6 +347,7 @@
           difficulty: "easy",
           elapsed: 0,
           timeLeft: 100,
+          countdown: 0,
           distance: 0,
           spawnClock: 0,
           nextSpawn: 1.4,
@@ -412,6 +415,7 @@
         state.difficulty = selectedDifficulty;
         state.mode = "playing";
         state.timeLeft = palettes[state.difficulty].time;
+        state.countdown = COUNTDOWN_SECONDS;
         els.startScreen.hidden = true;
         els.gameOverScreen.hidden = true;
         spawnEntity(660);
@@ -469,6 +473,7 @@
           return;
         }
         if (state.mode !== "playing" || event.ctrlKey || event.metaKey || event.altKey) return;
+        if (state.countdown > 0) return;
         if (event.key === "Backspace") {
           state.typed = state.typed.slice(0, -1);
           event.preventDefault();
@@ -507,6 +512,11 @@
         els.score.textContent = state.score;
         els.level.textContent = state.level;
 
+        if (state.mode === "playing" && state.countdown > 0) {
+          els.typebar.textContent = `Get ready... ${Math.ceil(state.countdown)}`;
+          return;
+        }
+
         const target = currentTarget();
         if (!target) {
           els.typebar.innerHTML = "<span>Keep running...</span>";
@@ -519,6 +529,12 @@
 
       function update(dt) {
         if (state.mode !== "playing") return;
+        if (state.countdown > 0) {
+          state.countdown = Math.max(0, state.countdown - dt);
+          updateHud();
+          return;
+        }
+
         const cfg = palettes[state.difficulty];
         const speed = cfg.speed + state.level * cfg.speedLevel;
         state.elapsed += dt;
@@ -648,10 +664,28 @@
         drawBackground(t);
         for (const entity of state.entities) drawEntity(entity);
         drawHero(t);
+        if (state.mode === "playing" && state.countdown > 0) {
+          drawCountdown();
+        }
         if (state.mode !== "playing") {
           ctx.fillStyle = "rgba(0, 0, 0, 0.18)";
           ctx.fillRect(0, 0, canvas.width, canvas.height);
         }
+      }
+
+      function drawCountdown() {
+        const label = String(Math.ceil(state.countdown));
+        ctx.fillStyle = "rgba(7, 10, 18, 0.36)";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.textAlign = "center";
+        ctx.font = "bold 92px Trebuchet MS, sans-serif";
+        ctx.fillStyle = "#512d47";
+        ctx.fillText(label, canvas.width / 2 + 5, 232 + 5);
+        ctx.fillStyle = "#ffe28b";
+        ctx.fillText(label, canvas.width / 2, 232);
+        ctx.font = "bold 24px Trebuchet MS, sans-serif";
+        ctx.fillStyle = "#f7f2df";
+        ctx.fillText("Hands on keys", canvas.width / 2, 276);
       }
 
       function loop(now) {

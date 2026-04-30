@@ -6,7 +6,7 @@
   - Current values make Hard extremely aggressive because base speed, spawn rate, and level scaling all compound.
   - Target: Easy should be playable for beginners, Normal should pressure average typists, Hard should demand sustained focus without feeling random.
 
-- [ ] Add a short countdown before movement starts.
+- [x] Add a short countdown before movement starts.
   - Gives players time to put their hands on the keyboard after pressing Start.
   - Prevents the first word from feeling unfair.
 
