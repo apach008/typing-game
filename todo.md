@@ -80,7 +80,7 @@
   - Option B: wrong key flashes the expected letter and pauses input briefly.
   - Pick the version that feels more like a typing trainer than a punishment trap.
 
-- [ ] Add support for punctuation and capitalization modes.
+- [x] Add support for punctuation and capitalization modes.
   - Beginner: lowercase words only.
   - Advanced: mixed case, punctuation, short phrases.
   - Expert: symbols and numbers.

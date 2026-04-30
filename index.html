@@ -134,7 +134,8 @@
     }
 
     .difficulty,
-    .run-modes {
+    .run-modes,
+    .typing-modes {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
       gap: 8px;
@@ -266,6 +267,7 @@
 
       .difficulty,
       .run-modes,
+      .typing-modes,
       .final-grid {
         grid-template-columns: 1fr;
       }
@@ -302,6 +304,11 @@
             <button class="active" data-difficulty="easy">Easy</button>
             <button data-difficulty="normal">Normal</button>
             <button data-difficulty="hard">Hard</button>
+          </div>
+          <div class="typing-modes" role="group" aria-label="Typing mode">
+            <button class="active" data-typing-mode="beginner">Beginner</button>
+            <button data-typing-mode="advanced">Advanced</button>
+            <button data-typing-mode="expert">Expert</button>
           </div>
           <button class="primary" id="startButton">Start Run</button>
         </div>
@@ -473,6 +480,15 @@
         { id: "magnet", label: "Magnet", charges: 5 }
       ];
 
+      const typingModes = {
+        beginner: { label: "Beginner", punctuation: 0, symbol: 0, number: 0, titleCase: false, uppercase: false },
+        advanced: { label: "Advanced", punctuation: 0.38, symbol: 0, number: 0, titleCase: true, uppercase: false },
+        expert: { label: "Expert", punctuation: 0.45, symbol: 0.32, number: 0.28, titleCase: true, uppercase: true }
+      };
+
+      const punctuationMarks = [".", ",", "!", "?"];
+      const expertSymbols = ["#", "$", "%", "&", "+", "="];
+
       const COUNTDOWN_SECONDS = 3;
       const STARTING_HEARTS = 3;
       const WARMUP_SECONDS = 10;
@@ -511,6 +527,7 @@
           mode: "menu",
           runMode: "endless",
           difficulty: "easy",
+          typingMode: "beginner",
           seed: 0,
           rngState: 0,
           elapsed: 0,
@@ -576,11 +593,27 @@
         const cfg = palettes[state.difficulty];
         const words = wordCategories[category] || wordCategories.obstacle;
         if (category === "boss") {
-          return words[Math.floor(random() * words.length)];
+          return formatWordForTypingMode(words[Math.floor(random() * words.length)]);
         }
         const pool = words.filter(word => word.length >= cfg.wordMin && word.length <= cfg.wordMax);
         const eligibleWords = pool.length ? pool : words;
-        return eligibleWords[Math.floor(random() * eligibleWords.length)];
+        return formatWordForTypingMode(eligibleWords[Math.floor(random() * eligibleWords.length)]);
+      }
+
+      function formatWordForTypingMode(word) {
+        const mode = typingModes[state.typingMode] || typingModes.beginner;
+        if (state.typingMode === "beginner") return word.toLowerCase();
+
+        let formatted = mode.titleCase && random() < 0.42 ? titleCaseWord(word) : word;
+        if (mode.uppercase && random() < 0.18) formatted = formatted.toUpperCase();
+        if (mode.number && random() < mode.number) formatted += String(2 + Math.floor(random() * 8));
+        if (mode.symbol && random() < mode.symbol) formatted += expertSymbols[Math.floor(random() * expertSymbols.length)];
+        if (mode.punctuation && random() < mode.punctuation) formatted += punctuationMarks[Math.floor(random() * punctuationMarks.length)];
+        return formatted;
+      }
+
+      function titleCaseWord(word) {
+        return word.replace(/\b[a-z]/g, letter => letter.toUpperCase());
       }
 
       function pickEntityKind() {
@@ -754,9 +787,11 @@
         audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
         const selectedDifficulty = state.difficulty;
         const selectedRunMode = state.runMode;
+        const selectedTypingMode = state.typingMode;
         state = makeState();
         state.difficulty = selectedDifficulty;
         state.runMode = selectedRunMode;
+        state.typingMode = selectedTypingMode;
         state.seed = runModes[state.runMode].daily ? dailySeed() : Math.floor(Math.random() * 0xffffffff);
         state.rngState = state.seed;
         state.mode = "playing";
@@ -883,6 +918,16 @@
         return letter === " " ? "space" : letter;
       }
 
+      function escapeHtml(value) {
+        return value.replace(/[&<>"']/g, char => ({
+          "&": "&amp;",
+          "<": "&lt;",
+          ">": "&gt;",
+          '"': "&quot;",
+          "'": "&#39;"
+        }[char]));
+      }
+
       function failKey(target) {
         if (state.powerups.shield > 0) {
           state.powerups.shield -= 1;
@@ -949,9 +994,9 @@
           return;
         }
         const target = currentTarget();
-        if (event.key.length !== 1 || (!/[a-z]/i.test(event.key) && event.key !== " ")) return;
+        if (event.key.length !== 1) return;
 
-        const key = event.key.toLowerCase();
+        const key = event.key;
         state.totalTyped += 1;
         if (key === " ") event.preventDefault();
         if (target && target.word[state.typed.length] === key) {
@@ -995,12 +1040,12 @@
           els.typebar.innerHTML = "<span>Keep running...</span>";
           return;
         }
-        const typed = target.word.slice(0, state.typed.length);
+        const typed = escapeHtml(target.word.slice(0, state.typed.length));
         const flashExpected = state.expectedFlash > 0 && expectedLetter(target);
-        const expected = flashExpected ? target.word[state.typed.length] : "";
+        const expected = flashExpected ? escapeHtml(displayLetter(target.word[state.typed.length])) : "";
         const pendingStart = state.typed.length + (flashExpected ? 1 : 0);
-        const pending = target.word.slice(pendingStart);
-        const expectedHtml = flashExpected ? `<span class="expected">${displayLetter(expected)}</span>` : "";
+        const pending = escapeHtml(target.word.slice(pendingStart));
+        const expectedHtml = flashExpected ? `<span class="expected">${expected}</span>` : "";
         els.typebar.innerHTML = `<span class="typed">${typed}</span>${expectedHtml}<span class="pending">${pending}</span>`;
       }
 
@@ -1365,6 +1410,15 @@
           button.classList.add("active");
           state.runMode = button.dataset.runMode;
           state.timeLeft = runModes[state.runMode].timed ? palettes[state.difficulty].time : Infinity;
+          updateHud();
+        });
+      });
+
+      document.querySelectorAll("[data-typing-mode]").forEach(button => {
+        button.addEventListener("click", () => {
+          document.querySelectorAll("[data-typing-mode]").forEach(b => b.classList.remove("active"));
+          button.classList.add("active");
+          state.typingMode = button.dataset.typingMode;
           updateHud();
         });
       });
