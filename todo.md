@@ -2,59 +2,69 @@
 
 To do, ordered by impact (highest first):
 
-- [x] Add persistent personal bests per difficulty.
-  - Best Net WPM, best Raw WPM, best accuracy, longest streak, top score — keyed by difficulty in `localStorage`.
-  - Show on the start screen; flash a "New Best!" banner on the game-over screen when beaten.
-  - This is what turns a one-off game into a trainer. Highest-impact remaining item.
+- [ ] Auto-pause when the window loses focus or visibility.
+  - Listen for `blur` and `visibilitychange` and call `pauseGame()` when the run is active.
+  - On resume, replay the 3s countdown so the player isn't punished by an off-screen heart loss.
+  - Standard expectation in any timed game; without it, alt-tabbing silently kills runs.
 
-- [x] Add a pause menu.
-  - `Esc` pauses. Show Resume and Restart only — no "Exit to Menu" until there is a meaningful menu state to return to.
-  - Practice sessions get interrupted by every notification and tab switch; without pause the run is just lost.
+- [ ] Add a live WPM and accuracy graph to the game-over screen.
+  - Sample net WPM and rolling accuracy each second during a run; render a small line chart in the final-grid panel.
+  - Highlight the best WPM peak and lowest accuracy dip so players can see *where* they fell apart, not just the average.
+  - This is the single most-cited reason serious typists stick with Monkeytype/keybr — summary numbers alone don't teach.
 
-- [x] Add a mute toggle.
-  - Single binary toggle, persisted to `localStorage`. Volume slider is overkill for ~5 sounds and unused in serious typing apps.
-  - Reachable from the start screen and the pause menu.
+- [ ] Track bigram and trigram weaknesses, not only single letters.
+  - When a typo lands on letter X and the previous correct letter was Y, increment a `letterMistakes["yx"]` (and trigram) counter alongside the existing single-letter tracking.
+  - Surface the top weak bigrams in lifetime stats and drill suggestions next to the letter list.
+  - Most typing pain lives at the bigram level (th, ing, qu, ed); single-letter tracking misses it entirely.
 
-- [x] Add lifetime typing stats.
-  - Cumulative words typed, total runs, total time on task.
-  - Persistent letter-mistake heatmap that aggregates across runs (extends the existing per-run weakness tracker).
-  - Gives players a real "am I improving?" signal, which the per-run breakdown alone cannot provide.
+- [ ] Fix the Net WPM calculation to count in-progress correct keystrokes.
+  - Current formula at `index.html:2620` only counts chars from *completed* targets — partial progress on a half-typed final word never scores.
+  - Switch to `((correctTyped - mistypedKeys) / 5) / minutes` so the live HUD value reflects what the player is actually doing.
+  - Validate against a 60s clean run vs a 60s run with deliberate typos to confirm the spread matches Monkeytype norms.
 
-- [x] Tier word pools by frequency, not only by length.
-  - Easy: top ~200 most-common words for muscle-memory drilling.
-  - Normal: full english_1k (current behavior).
-  - Hard: a rarer pack (e.g. english_5k tail) so the difficulty curve is about word familiarity, not just letter count.
+- [ ] Add "Quit to Menu" to the pause menu.
+  - The original todo gated this on meaningful menu state — with PBs, lifetime stats, drill, settings, and run-mode selection, that bar is now cleared.
+  - Behavior: end the run without recording it (or record as abandoned) and return to the start screen.
 
-- [x] Add a one-screen onboarding overlay.
-  - Triggered on first load (gated by a `localStorage` flag) and reachable from a "How to play" link on the start screen.
-  - Cover: target priority (always the next threat), hearts, streaks, powerups, what each entity type means.
-  - Broad first-impression impact — every new player needs this once.
+- [ ] Make Daily mode actually feel daily.
+  - Seed by UTC date instead of local date so a run is shared across timezones (`index.html:2350`).
+  - Persist `dailyResult-YYYY-MM-DD` to localStorage and show "Today's score: X — come back tomorrow" on the start screen when set, with a one-tap copy of a shareable string ("TypeQuest Daily 2026-04-30 · 78 NetWPM · 96%").
+  - Track and display a daily streak counter; missing a day resets it. Streaks are the entire reason daily modes exist.
 
-- [x] Add a keypress sound theme picker.
-  - Options: mechanical click, soft tap, none. Persist choice.
-  - Signature feature of typing trainers (Monkeytype, keybr) — players hear this thousands of times per session, so letting them tune it is unusually high-impact for the work involved.
+- [ ] Add a true rarer-word pool for Hard.
+  - `commonWords.slice(-260)` is still the tail of english-1k — common-ish. Bring in a curated rarer pack (~500 words: rarer roots, longer compounds, sciencey vocab) and route Hard there.
+  - Easy/Normal stay where they are; the difficulty curve currently leans almost entirely on speed/spawn rate, not familiarity.
 
-- [x] Add a settings panel.
-  - Mute toggle, sound theme, default typing mode (beginner/advanced/expert), default difficulty.
-  - Reachable from start screen and pause menu.
-  - Becomes valuable once the persistence and audio items above are in place.
+- [ ] Add a sentence / passage typing mode.
+  - New run mode "Practice" that streams full sentences (literature, quotes, common phrases) as one long target instead of single words.
+  - Disables threats, focuses purely on sustained typing — pairs with the runner mode rather than replacing it.
+  - Most typing trainers have this for a reason: real prose has rhythm and capitalization patterns that single-word drills don't reproduce.
 
-- [x] Add a targeted drill mode.
-  - Player picks (or auto-suggests from their lifetime mistake heatmap) a letter or bigram, and the next run filters words containing it.
-  - Single highest-value mode for players who actually want to fix specific weaknesses.
+- [ ] Add a checkpoint or continue option in Adventure mode.
+  - Dying on level 4 currently forces a restart from 1, which is the main reason players abandon Adventure.
+  - Cheapest version: on game over in Adventure with at least one boss defeated, offer "Continue from Level N" for a score penalty (e.g. -50%).
 
-- [x] Add inline difficulty descriptions on the start screen.
-  - One-liner under each option so players choose deliberately. No separate modal.
-  - Easy: short common words, slow threats, forgiving timers.
-  - Normal: balanced runner pacing.
-  - Hard: longer/rarer words, dense threats, strict pacing.
+- [ ] Add achievement / milestone toasts.
+  - First 60 WPM, first 50-streak, first boss kill, first daily streak of 7, first Hard run cleared, first PB beaten this week, etc.
+  - Surface as an unobtrusive corner toast during play and a checklist on the start screen.
+  - Cheap to implement, very high engagement leverage; gives early players a reason to come back tomorrow.
 
-- [x] Refocus sound effects on typing-loop events.
-  - Keep: keypress tick, word complete, typo error.
-  - Drop the sword / jump / damage / level-up / game-over flavor sounds — those serve the action skin, not the typing practice.
+- [ ] Persist recent run history (last 10 runs).
+  - Date, mode, difficulty, net WPM, accuracy, streak. Show as a compact list under the lifetime panel.
+  - PBs alone hide the trend ("am I getting faster or just lucky on one run?"); recent runs answer that.
 
-- [x] Add a favicon and page metadata.
-  - Small pixel key/sword icon, `<title>`, and a basic `<meta name="description">` / `og:title` for shareable links.
+- [ ] Add reset controls in Settings.
+  - "Reset personal bests" and "Clear lifetime stats" buttons with a confirm step.
+  - Currently there's no way out of bad/test data; users on shared machines have no privacy option either.
 
-- [x] Add a "best on desktop" notice for touch devices.
-  - Detect via `(pointer: coarse)` and show a small banner — typing-practice on a phone keyboard is a frustrating first impression.
+- [ ] Add configurable run length.
+  - Fixed timers per difficulty (105/95/85s) are the only options; expose 30s sprint, 60s standard, 120s endurance as a setting separate from difficulty.
+  - Lets players pick a session size that matches their attention budget; 30s is the de-facto warmup norm in typing communities.
+
+- [ ] Smooth out theme transitions between levels.
+  - Currently every level swap snaps to a new palette mid-frame.
+  - Crossfade sky/ground colors over ~0.6s on level change; theme parameters are already centrally defined so a per-frame interpolation is straightforward.
+
+- [ ] Show a small entity/powerup legend on the start screen.
+  - One-row icon strip under "How to play" naming each entity (rock = jump, enemy = attack, chest = optional treasure, etc.) and each powerup color.
+  - The onboarding cards explain the categories but don't pair each label with the actual sprite the player will see; players currently learn by losing hearts.
