@@ -1128,10 +1128,63 @@
         "liquid", "log", "meant", "quotient", "teeth", "shell", "neck", "program", "public", "universe"
       ];
 
+      const hardWords = [
+        "abacus", "ablate", "abscond", "acacia", "accrete", "acolyte", "acumen", "adage", "adrift", "aegis",
+        "aerate", "affine", "agate", "alchemy", "alcove", "alder", "alembic", "algae", "alkali", "alluvium",
+        "amaranth", "amulet", "anagram", "anode", "aphelion", "apogee", "archive", "argon", "armature", "ascetic",
+        "aspen", "astrolabe", "asylum", "atlas", "auburn", "auger", "aureate", "aurora", "basalt", "bastion",
+        "beacon", "beryl", "bismuth", "bivouac", "bracken", "bramble", "brazier", "brocade", "bromide", "cairn",
+        "caldera", "caliper", "cambium", "cameo", "canary", "capstan", "carafe", "carnelian", "cassava", "catkin",
+        "caustic", "censer", "chancel", "chasm", "cinnabar", "cipher", "citadel", "cleaver", "cobalt", "codex",
+        "colander", "conifer", "copse", "corbel", "coulee", "craggy", "crenel", "crucible", "cryptic", "cubit",
+        "curio", "cypress", "dactyl", "daedal", "decanter", "decibel", "decoct", "deictic", "delta", "demotic",
+        "dendrite", "diadem", "diorama", "dirge", "distill", "dolmen", "dovetail", "dowsing", "druidic", "duplex",
+        "dyadic", "ebonite", "echelon", "eclipse", "effigy", "elixir", "ellipse", "ember", "empyrean", "enamel",
+        "endive", "enigma", "entropic", "eolith", "equable", "ergot", "ermine", "errant", "escrow", "estuary",
+        "etching", "euchre", "eulogy", "evince", "exhale", "facade", "falcon", "fathom", "fauna", "feldspar",
+        "fennel", "ferrous", "fervor", "filament", "finial", "fjord", "flagon", "flaxen", "flint", "floret",
+        "fluxion", "forage", "fossil", "fractal", "fresco", "fulcrum", "fungal", "galleon", "gambit", "garnet",
+        "gelid", "geyser", "gimbal", "glacial", "glade", "gossamer", "gothic", "gourd", "granite", "graphite",
+        "grimoire", "grotto", "guano", "gunnel", "halcyon", "halide", "halyard", "hamlet", "harbor", "harlequin",
+        "hearth", "helium", "henna", "herald", "hexagon", "hickory", "hinter", "horizon", "hybrid", "hydra",
+        "igneous", "imago", "inertia", "inlay", "iodine", "isobar", "isotope", "ivory", "jacinth", "jargon",
+        "jasper", "jetty", "jovian", "jubilee", "juncture", "juniper", "kaolin", "karst", "kelvin", "kernel",
+        "kilnwork", "kismet", "krypton", "lagoon", "lancer", "lattice", "laurel", "ledger", "lichen", "lignite",
+        "liminal", "lithium", "loamy", "locust", "lumen", "lunar", "lupine", "lyceum", "magma", "malachite",
+        "mangrove", "mantle", "mariner", "matrix", "meadow", "medial", "mercury", "meridian", "meteor", "micaceous",
+        "midair", "mineral", "mirage", "mistral", "modem", "moraine", "mosaic", "mottle", "murmur", "mycelium",
+        "myriad", "nadir", "nautilus", "nebula", "nectar", "neonate", "nickel", "nodule", "nomad", "novice",
+        "nucleus", "obelisk", "obsidian", "ochre", "octave", "oncology", "onyxine", "opaline", "oracle", "orbital",
+        "orchid", "oread", "origami", "osmosis", "outcrop", "oxbow", "oxide", "palisade", "papyrus", "parallax",
+        "parchment", "pelagic", "penumbra", "perigee", "petal", "petrel", "phalanx", "photon", "pinnacle", "pixel",
+        "placid", "plasma", "plinth", "pollen", "porous", "prairie", "prism", "pumice", "quartz", "quasar",
+        "quill", "quince", "radial", "radium", "ravel", "ravine", "reagent", "rebus", "redoubt", "reefline",
+        "refraction", "relic", "resin", "rilling", "ripple", "riveted", "rosette", "rubble", "saffron", "saguaro",
+        "saline", "sapphire", "sargasso", "satchel", "savant", "scoria", "scythe", "sediment", "selenium", "sepia",
+        "seraph", "serpentine", "shale", "shard", "sienna", "silica", "siltstone", "sinus", "sirocco", "slate",
+        "solstice", "sorrel", "spangle", "spectrum", "sphinx", "spindle", "spiral", "stalwart", "stanza", "stencil",
+        "strata", "stratum", "sublime", "sulfur", "summit", "sundial", "swale", "sycamore", "talcum", "tangent",
+        "tannin", "tapestry", "tectonic", "tempest", "tendon", "terrapin", "thicket", "thorium", "tidal", "timber",
+        "tincture", "topaz", "torque", "torrent", "tracer", "trellis", "trident", "truffle", "tundra", "turbine",
+        "twill", "ultravox", "umber", "undulate", "upland", "uranium", "valence", "varnish", "vector", "velvet",
+        "verdant", "vernal", "vessel", "vialful", "viceroy", "viscous", "vortex", "warren", "whetstone", "willow",
+        "winnow", "xenon", "xylem", "yarrow", "yeoman", "yonder", "zealot", "zephyr", "zircon", "zodiac",
+        "abjure", "acrid", "adroit", "aerial", "agile", "amuletic", "angular", "anneal", "antler", "aperture",
+        "arbor", "arclight", "ardent", "argent", "arpeggio", "arsenic", "artifice", "ashen", "askew", "auric",
+        "avalanche", "azimuth", "balsam", "baroque", "basin", "bayou", "bellows", "benign", "billet", "blazon",
+        "boreal", "brackish", "brindle", "bronze", "burdock", "cabal", "cadence", "cairned", "callow", "camber",
+        "canopy", "carapace", "carbine", "carillon", "cavern", "cedar", "cerulean", "chalice", "chaparral", "chert",
+        "chimera", "chloride", "circuit", "cloister", "coalesce", "cochineal", "cometary", "conduit", "copper", "cordial",
+        "corona", "cavetto", "craton", "crevice", "cursive", "cutlass", "cygnet", "cymbal", "debris", "decagon",
+        "deluge", "diatom", "dilute", "diorite", "dormant", "driftwood", "ductile", "easel", "ecliptic", "edifice",
+        "egress", "electrum", "elodea", "emerald", "emulate", "enclave", "enroute", "epicenter", "epoxy", "erosion",
+        "errata", "escarp", "evaporate", "evergreen", "faceted", "fallow", "farrier", "ferrule", "fibrous", "fissure"
+      ];
+
       const wordPools = {
         easy: commonWords.slice(0, 200),
         normal: commonWords,
-        hard: commonWords.slice(-260)
+        hard: hardWords
       };
 
       const entityKinds = {
