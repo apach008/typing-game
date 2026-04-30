@@ -22,7 +22,7 @@ To do, ordered by impact (highest first):
   - Switch to `((correctTyped - mistypedKeys) / 5) / minutes` so the live HUD value reflects what the player is actually doing.
   - Validate against a 60s clean run vs a 60s run with deliberate typos to confirm the spread matches Monkeytype norms.
 
-- [ ] Add "Quit to Menu" to the pause menu.
+- [x] Add "Quit to Menu" to the pause menu.
   - The original todo gated this on meaningful menu state — with PBs, lifetime stats, drill, settings, and run-mode selection, that bar is now cleared.
   - Behavior: end the run without recording it (or record as abandoned) and return to the start screen.
 

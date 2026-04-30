@@ -884,6 +884,7 @@
             </div>
           </div>
           <button id="restartButton">Restart</button>
+          <button id="quitToMenuButton">Quit to Menu</button>
         </div>
       </div>
     </section>
@@ -2384,6 +2385,27 @@
         updateHud();
       }
 
+      function quitToMenu() {
+        if (state.mode !== "paused") return;
+        const selectedDifficulty = state.difficulty;
+        const selectedRunMode = state.runMode;
+        const selectedTypingMode = state.typingMode;
+        const selectedDrillTarget = state.drillTarget;
+        state = makeState();
+        state.difficulty = selectedDifficulty;
+        state.runMode = selectedRunMode;
+        state.typingMode = selectedTypingMode;
+        state.drillTarget = selectedDrillTarget;
+        state.timeLeft = runModes[state.runMode].timed ? palettes[state.difficulty].time : Infinity;
+        els.pauseScreen.hidden = true;
+        els.gameOverScreen.hidden = true;
+        els.startScreen.hidden = false;
+        spawnEntity(650);
+        spawnEntity(920);
+        updateHud();
+        focusWithoutScroll(document.getElementById("startButton"));
+      }
+
       function endGame(message, won = false) {
         state.mode = "over";
         const finalRawWpm = currentRawWpm();
@@ -3578,6 +3600,7 @@
       document.getElementById("againButton").addEventListener("click", startGame);
       document.getElementById("resumeButton").addEventListener("click", resumeGame);
       document.getElementById("restartButton").addEventListener("click", startGame);
+      document.getElementById("quitToMenuButton").addEventListener("click", quitToMenu);
       document.getElementById("howToPlayButton").addEventListener("click", () => showOnboarding(true));
       document.getElementById("closeOnboardingButton").addEventListener("click", closeOnboarding);
       els.startSettingsButton.addEventListener("click", () => openSettings(els.startSettingsButton));
