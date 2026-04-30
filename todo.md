@@ -25,7 +25,7 @@ To do, ordered by impact (highest first):
   - Normal: full english_1k (current behavior).
   - Hard: a rarer pack (e.g. english_5k tail) so the difficulty curve is about word familiarity, not just letter count.
 
-- [ ] Add a one-screen onboarding overlay.
+- [x] Add a one-screen onboarding overlay.
   - Triggered on first load (gated by a `localStorage` flag) and reachable from a "How to play" link on the start screen.
   - Cover: target priority (always the next threat), hearts, streaks, powerups, what each entity type means.
   - Broad first-impression impact — every new player needs this once.

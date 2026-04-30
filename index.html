@@ -107,7 +107,7 @@
 
     .menu {
       width: min(560px, 100%);
-      max-height: calc(100vh - 48px);
+      max-height: min(calc(100vh - 48px), calc(100% - 48px));
       overflow-y: auto;
       border: 1px solid #526087;
       background: #141b30;
@@ -193,9 +193,57 @@
       color: #fff3c4;
     }
 
+    .how-to-play-link {
+      width: max-content;
+      justify-self: center;
+      border: 0;
+      background: transparent;
+      color: #ffe28b;
+      padding: 6px 8px;
+      box-shadow: none;
+      text-decoration: underline;
+      text-underline-offset: 3px;
+    }
+
     #pauseScreen button {
       width: 100%;
       margin-top: 8px;
+    }
+
+    #onboardingScreen {
+      background: rgba(7, 10, 18, 0.86);
+      z-index: 3;
+    }
+
+    .onboarding-menu {
+      width: min(680px, 100%);
+    }
+
+    .onboarding-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px;
+      margin: 16px 0;
+    }
+
+    .onboarding-card {
+      border: 1px solid #404d70;
+      background: #10172a;
+      padding: 12px;
+    }
+
+    .onboarding-card h3 {
+      margin: 0 0 6px;
+      color: #ffe28b;
+      font-size: 16px;
+      line-height: 1.15;
+    }
+
+    .onboarding-card p {
+      margin: 0;
+      color: #ddd5b5;
+      font-size: 14px;
+      line-height: 1.35;
     }
 
     .best-panel {
@@ -405,6 +453,7 @@
       .run-modes,
       .typing-modes,
       .best-grid,
+      .onboarding-grid,
       .lifetime-grid,
       .final-grid {
         grid-template-columns: 1fr;
@@ -471,7 +520,42 @@
           <div class="menu-actions">
             <button class="primary" id="startButton">Start Run</button>
             <button class="sound-toggle" id="startMuteButton" type="button" aria-pressed="false">Sound On</button>
+            <button class="how-to-play-link" id="howToPlayButton" type="button">How to play</button>
           </div>
+        </div>
+      </div>
+
+      <div class="overlay" id="onboardingScreen" role="dialog" aria-modal="true" aria-labelledby="onboardingTitle" hidden>
+        <div class="menu onboarding-menu">
+          <h2 id="onboardingTitle">How to Play</h2>
+          <p>Type the word above the closest active threat. The hero handles the move when the word is complete.</p>
+          <div class="onboarding-grid">
+            <section class="onboarding-card">
+              <h3>Target Priority</h3>
+              <p>Always type the next threat first: the leftmost word is the one about to reach the hero.</p>
+            </section>
+            <section class="onboarding-card">
+              <h3>Hearts</h3>
+              <p>You start with three hearts. Missed required threats cost one; optional pickups can safely pass by.</p>
+            </section>
+            <section class="onboarding-card">
+              <h3>Streaks</h3>
+              <p>Clean words build your streak, raise the score multiplier, and trigger combo bonuses.</p>
+            </section>
+            <section class="onboarding-card">
+              <h3>Powerups</h3>
+              <p>Time adds seconds, Focus slows threats, Shield blocks one mistake, and Magnet boosts pickup value.</p>
+            </section>
+            <section class="onboarding-card">
+              <h3>Threats</h3>
+              <p>Rocks and bridges make you jump. Ground, flying, shielded, and boss enemies make you attack.</p>
+            </section>
+            <section class="onboarding-card">
+              <h3>Treasure</h3>
+              <p>Chests and powerups are optional. Type them when you can, but never before an immediate danger.</p>
+            </section>
+          </div>
+          <button class="primary" id="closeOnboardingButton" type="button">Got It</button>
         </div>
       </div>
 
@@ -523,6 +607,7 @@
         powerup: document.getElementById("powerup"),
         typebar: document.getElementById("typebar"),
         startScreen: document.getElementById("startScreen"),
+        onboardingScreen: document.getElementById("onboardingScreen"),
         gameOverScreen: document.getElementById("gameOverScreen"),
         pauseScreen: document.getElementById("pauseScreen"),
         finalScore: document.getElementById("finalScore"),
@@ -1117,6 +1202,7 @@
       const PERSONAL_BESTS_KEY = "typequest-personal-bests-v1";
       const LIFETIME_STATS_KEY = "typequest-lifetime-stats-v1";
       const SOUND_MUTED_KEY = "typequest-sound-muted-v1";
+      const ONBOARDING_SEEN_KEY = "typequest-onboarding-seen-v1";
       const PERSONAL_BEST_FIELDS = [
         { key: "netWpm", label: "Net WPM" },
         { key: "rawWpm", label: "Raw WPM" },
@@ -1384,6 +1470,51 @@
           return false;
         }
         return true;
+      }
+
+      function readOnboardingSeen() {
+        try {
+          return window.localStorage.getItem(ONBOARDING_SEEN_KEY) === "true";
+        } catch (error) {
+          return true;
+        }
+      }
+
+      function writeOnboardingSeen() {
+        try {
+          window.localStorage.setItem(ONBOARDING_SEEN_KEY, "true");
+        } catch (error) {
+          return false;
+        }
+        return true;
+      }
+
+      function isOnboardingOpen() {
+        return !els.onboardingScreen.hidden;
+      }
+
+      function focusWithoutScroll(element) {
+        if (!element) return;
+        try {
+          element.focus({ preventScroll: true });
+        } catch (error) {
+          element.focus();
+        }
+      }
+
+      function showOnboarding(markSeen = false) {
+        if (markSeen) writeOnboardingSeen();
+        els.onboardingScreen.hidden = false;
+        const onboardingMenu = els.onboardingScreen.querySelector(".menu");
+        if (onboardingMenu) onboardingMenu.scrollTop = 0;
+        focusWithoutScroll(document.getElementById("closeOnboardingButton"));
+        if (onboardingMenu) onboardingMenu.scrollTop = 0;
+      }
+
+      function closeOnboarding() {
+        writeOnboardingSeen();
+        els.onboardingScreen.hidden = true;
+        focusWithoutScroll(document.getElementById("howToPlayButton"));
       }
 
       function updateMuteButtons() {
@@ -1689,6 +1820,7 @@
         state.timeLeft = runModes[state.runMode].timed ? palettes[state.difficulty].time : Infinity;
         state.countdown = COUNTDOWN_SECONDS;
         els.startScreen.hidden = true;
+        els.onboardingScreen.hidden = true;
         els.gameOverScreen.hidden = true;
         els.pauseScreen.hidden = true;
         spawnEntity(660);
@@ -1961,6 +2093,13 @@
       }
 
       function handleKey(event) {
+        if (isOnboardingOpen()) {
+          if (event.key === "Escape") {
+            closeOnboarding();
+            event.preventDefault();
+          }
+          return;
+        }
         if (event.key === "Escape") {
           if (state.mode === "playing") {
             pauseGame();
@@ -2759,6 +2898,8 @@
       document.getElementById("againButton").addEventListener("click", startGame);
       document.getElementById("resumeButton").addEventListener("click", resumeGame);
       document.getElementById("restartButton").addEventListener("click", startGame);
+      document.getElementById("howToPlayButton").addEventListener("click", () => showOnboarding(true));
+      document.getElementById("closeOnboardingButton").addEventListener("click", closeOnboarding);
       els.muteButtons.forEach(button => button.addEventListener("click", toggleSoundMuted));
       window.addEventListener("keydown", handleKey);
 
@@ -2768,6 +2909,7 @@
       updateLifetimeStatsDisplay();
       spawnEntity(650);
       spawnEntity(920);
+      if (!readOnboardingSeen()) showOnboarding();
       cancelAnimationFrame(raf);
       raf = requestAnimationFrame(loop);
     })();
