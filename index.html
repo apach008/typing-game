@@ -864,6 +864,12 @@
       display: none;
     }
 
+    .final-run-context {
+      margin: -4px 0 12px;
+      color: var(--muted);
+      font-weight: 700;
+    }
+
     .final-grid {
       display: grid;
       grid-template-columns: repeat(2, 1fr);
@@ -1073,7 +1079,7 @@
       <div class="stat"><span>Net WPM</span><strong id="wpm">0</strong></div>
       <div class="stat"><span>Accuracy</span><strong id="accuracy">100%</strong></div>
       <div class="stat"><span>Streak</span><strong id="streak">0</strong></div>
-      <div class="stat"><span>Timer</span><strong id="timer">90</strong></div>
+      <div class="stat"><span id="timerLabel">Timer</span><strong id="timer">90</strong></div>
       <div class="stat"><span>Score</span><strong id="score">0</strong></div>
       <div class="stat"><span>Level</span><strong id="level">1</strong></div>
       <div class="stat"><span>Hearts</span><strong id="hearts">3</strong></div>
@@ -1392,6 +1398,7 @@
         <div class="menu">
           <h2>Game Over</h2>
           <p id="gameOverText">The trail ends here.</p>
+          <p class="final-run-context" id="finalRunContext"></p>
           <div class="new-best-banner" id="newBestBanner" hidden>New Best!</div>
           <div class="final-grid">
             <div class="final-stat"><span>Score</span><strong id="finalScore">0</strong></div>
@@ -1417,6 +1424,7 @@
           </div>
           <button class="primary" id="continueButton" hidden>Continue from Level 1</button>
           <button class="primary" id="againButton">Run Again</button>
+          <button id="gameOverMenuButton" type="button">Back to Menu</button>
         </div>
       </div>
 
@@ -1449,6 +1457,7 @@
         wpm: document.getElementById("wpm"),
         accuracy: document.getElementById("accuracy"),
         streak: document.getElementById("streak"),
+        timerLabel: document.getElementById("timerLabel"),
         timer: document.getElementById("timer"),
         score: document.getElementById("score"),
         level: document.getElementById("level"),
@@ -1474,8 +1483,10 @@
         finalWeakBigrams: document.getElementById("finalWeakBigrams"),
         finalChartWrap: document.getElementById("finalChartWrap"),
         finalChart: document.getElementById("finalChart"),
+        finalRunContext: document.getElementById("finalRunContext"),
         continueButton: document.getElementById("continueButton"),
         againButton: document.getElementById("againButton"),
+        gameOverMenuButton: document.getElementById("gameOverMenuButton"),
         personalBestsTitle: document.getElementById("personalBestsTitle"),
         bestNetWpm: document.getElementById("bestNetWpm"),
         bestRawWpm: document.getElementById("bestRawWpm"),
@@ -2668,7 +2679,7 @@
         const text = els.dailyShareButton.dataset.shareString;
         if (!text) return;
         const showStatus = success => {
-          els.dailyShareStatus.textContent = success ? "Copied to clipboard." : "Couldn't copy. Select and copy manually.";
+          els.dailyShareStatus.textContent = success ? "Copied to clipboard." : `Copy manually: ${text}`;
         };
         if (navigator.clipboard && navigator.clipboard.writeText) {
           navigator.clipboard.writeText(text).then(() => showStatus(true), () => fallbackCopy(text, showStatus));
@@ -3649,8 +3660,8 @@
         updateHud();
       }
 
-      function quitToMenu() {
-        if (state.mode !== "paused") return;
+      function returnToMenu() {
+        if (state.mode !== "paused" && state.mode !== "over") return;
         const selectedDifficulty = state.difficulty;
         const selectedRunMode = state.runMode;
         const selectedRunLength = state.runLength;
@@ -3668,8 +3679,18 @@
         els.startScreen.hidden = false;
         spawnEntity(650);
         spawnEntity(920);
+        updateRunModeButtons();
+        updateDifficultyButtons();
+        updateRunLengthButtons();
+        updateTypingModeButtons();
+        updatePersonalBestsDisplay();
+        updateDailyDisplay();
         updateHud();
         focusWithoutScroll(document.getElementById("startButton"));
+      }
+
+      function quitToMenu() {
+        returnToMenu();
       }
 
       function adventureCheckpointLevel() {
@@ -3790,6 +3811,7 @@
 
         document.querySelector("#gameOverScreen h2").textContent = won ? "Victory" : "Game Over";
         els.gameOverText.textContent = message;
+        els.finalRunContext.textContent = runContextLabel();
         els.finalScore.textContent = state.score;
         els.finalRawWpm.textContent = finalRawWpm;
         els.finalNetWpm.textContent = finalNetWpm;
@@ -4266,6 +4288,7 @@
         els.wpm.textContent = currentNetWpm();
         els.accuracy.textContent = `${currentAccuracy()}%`;
         els.streak.textContent = state.streak;
+        els.timerLabel.textContent = runModes[state.runMode].timed ? "Timer" : "Elapsed";
         els.timer.textContent = runModes[state.runMode].timed ? Math.max(0, Math.ceil(state.timeLeft)) : `${Math.floor(state.elapsed)}s`;
         els.score.textContent = state.score;
         els.level.textContent = state.level;
@@ -5016,6 +5039,7 @@
       document.getElementById("startButton").addEventListener("click", startGame);
       els.againButton.addEventListener("click", startGame);
       els.continueButton.addEventListener("click", continueAdventure);
+      els.gameOverMenuButton.addEventListener("click", returnToMenu);
       document.getElementById("resumeButton").addEventListener("click", resumeGame);
       document.getElementById("restartButton").addEventListener("click", startGame);
       document.getElementById("quitToMenuButton").addEventListener("click", quitToMenu);
