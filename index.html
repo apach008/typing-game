@@ -667,6 +667,12 @@
         "liquid", "log", "meant", "quotient", "teeth", "shell", "neck", "program", "public", "universe"
       ];
 
+      const wordPools = {
+        easy: commonWords.slice(0, 200),
+        normal: commonWords,
+        hard: commonWords.slice(-260)
+      };
+
       const entityKinds = {
         obstacle: { type: "obstacle", weight: 34, y: 412, w: 38, h: 34, timingScale: 1, scoreScale: 1 },
         enemy: { type: "enemy", weight: 30, y: 390, w: 44, h: 46, timingScale: 1, scoreScale: 1 },
@@ -1416,8 +1422,9 @@
 
       function pickWord() {
         const range = adaptiveWordRange();
-        const pool = commonWords.filter(word => word.length >= range.min && word.length <= range.max);
-        const eligibleWords = pool.length ? pool : commonWords;
+        const basePool = wordPools[state.difficulty] || wordPools.normal;
+        const pool = basePool.filter(word => word.length >= range.min && word.length <= range.max);
+        const eligibleWords = pool.length ? pool : basePool;
         return formatWordForTypingMode(eligibleWords[Math.floor(random() * eligibleWords.length)]);
       }
 

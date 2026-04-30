@@ -20,7 +20,7 @@ To do, ordered by impact (highest first):
   - Persistent letter-mistake heatmap that aggregates across runs (extends the existing per-run weakness tracker).
   - Gives players a real "am I improving?" signal, which the per-run breakdown alone cannot provide.
 
-- [ ] Tier word pools by frequency, not only by length.
+- [x] Tier word pools by frequency, not only by length.
   - Easy: top ~200 most-common words for muscle-memory drilling.
   - Normal: full english_1k (current behavior).
   - Hard: a rarer pack (e.g. english_5k tail) so the difficulty curve is about word familiarity, not just letter count.
