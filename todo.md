@@ -2,7 +2,7 @@
 
 To do, ordered by impact (highest first):
 
-- [ ] Add persistent personal bests per difficulty.
+- [x] Add persistent personal bests per difficulty.
   - Best Net WPM, best Raw WPM, best accuracy, longest streak, top score — keyed by difficulty in `localStorage`.
   - Show on the start screen; flash a "New Best!" banner on the game-over screen when beaten.
   - This is what turns a one-off game into a trainer. Highest-impact remaining item.

@@ -107,6 +107,8 @@
 
     .menu {
       width: min(560px, 100%);
+      max-height: calc(100vh - 48px);
+      overflow-y: auto;
       border: 1px solid #526087;
       background: #141b30;
       box-shadow: 0 22px 0 rgba(0, 0, 0, 0.28);
@@ -172,6 +174,66 @@
       background: #2f8559;
       border-color: #7be39b;
       color: #f6ffe8;
+    }
+
+    .best-panel {
+      margin: 16px 0;
+      border: 1px solid #404d70;
+      background: #10172a;
+      padding: 12px;
+    }
+
+    .best-panel h2 {
+      margin: 0 0 10px;
+      color: #ffe28b;
+      font-size: 18px;
+      line-height: 1.1;
+      text-shadow: none;
+    }
+
+    .best-grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 6px;
+    }
+
+    .best-stat {
+      min-width: 0;
+      background: #202942;
+      border: 1px solid #34415f;
+      padding: 8px;
+    }
+
+    .best-stat span {
+      display: block;
+      color: var(--muted);
+      font-size: 10px;
+      text-transform: uppercase;
+      line-height: 1.1;
+    }
+
+    .best-stat strong {
+      display: block;
+      margin-top: 3px;
+      font-size: 18px;
+      line-height: 1;
+      white-space: nowrap;
+    }
+
+    .new-best-banner {
+      display: block;
+      margin: 8px 0 14px;
+      border: 1px solid #ffd271;
+      background: #5f3148;
+      color: #fff3c4;
+      padding: 10px 12px;
+      font-weight: 800;
+      text-align: center;
+      animation: newBestFlash 0.72s steps(2, end) 3;
+    }
+
+    .new-best-banner[hidden] {
+      display: none;
     }
 
     .final-grid {
@@ -256,6 +318,17 @@
       66% { transform: translateX(calc(-50% + 8px)); }
     }
 
+    @keyframes newBestFlash {
+      0%, 100% {
+        background: #5f3148;
+        color: #fff3c4;
+      }
+      50% {
+        background: #ffd271;
+        color: #2b1930;
+      }
+    }
+
     @media (max-width: 760px) {
       .game-shell {
         height: 100vh;
@@ -272,6 +345,7 @@
       .difficulty,
       .run-modes,
       .typing-modes,
+      .best-grid,
       .final-grid {
         grid-template-columns: 1fr;
       }
@@ -314,6 +388,16 @@
             <button data-typing-mode="advanced">Advanced</button>
             <button data-typing-mode="expert">Expert</button>
           </div>
+          <section class="best-panel" aria-labelledby="personalBestsTitle">
+            <h2 id="personalBestsTitle">Easy Personal Bests</h2>
+            <div class="best-grid">
+              <div class="best-stat"><span>Net WPM</span><strong id="bestNetWpm">-</strong></div>
+              <div class="best-stat"><span>Raw WPM</span><strong id="bestRawWpm">-</strong></div>
+              <div class="best-stat"><span>Accuracy</span><strong id="bestAccuracy">-</strong></div>
+              <div class="best-stat"><span>Streak</span><strong id="bestStreak">-</strong></div>
+              <div class="best-stat"><span>Score</span><strong id="bestScore">-</strong></div>
+            </div>
+          </section>
           <button class="primary" id="startButton">Start Run</button>
         </div>
       </div>
@@ -322,6 +406,7 @@
         <div class="menu">
           <h2>Game Over</h2>
           <p id="gameOverText">The trail ends here.</p>
+          <div class="new-best-banner" id="newBestBanner" hidden>New Best!</div>
           <div class="final-grid">
             <div class="final-stat"><span>Score</span><strong id="finalScore">0</strong></div>
             <div class="final-stat"><span>Raw WPM</span><strong id="finalRawWpm">0</strong></div>
@@ -368,6 +453,13 @@
         finalLongestStreak: document.getElementById("finalLongestStreak"),
         finalReactionTime: document.getElementById("finalReactionTime"),
         finalWeakLetters: document.getElementById("finalWeakLetters"),
+        personalBestsTitle: document.getElementById("personalBestsTitle"),
+        bestNetWpm: document.getElementById("bestNetWpm"),
+        bestRawWpm: document.getElementById("bestRawWpm"),
+        bestAccuracy: document.getElementById("bestAccuracy"),
+        bestStreak: document.getElementById("bestStreak"),
+        bestScore: document.getElementById("bestScore"),
+        newBestBanner: document.getElementById("newBestBanner"),
         gameOverText: document.getElementById("gameOverText")
       };
 
@@ -927,6 +1019,14 @@
         normal: 1.0,
         hard: 0.85
       };
+      const PERSONAL_BESTS_KEY = "typequest-personal-bests-v1";
+      const PERSONAL_BEST_FIELDS = [
+        { key: "netWpm", label: "Net WPM" },
+        { key: "rawWpm", label: "Raw WPM" },
+        { key: "accuracy", label: "Accuracy" },
+        { key: "streak", label: "Streak" },
+        { key: "score", label: "Score" }
+      ];
 
       let audioCtx;
       let state = makeState();
@@ -997,6 +1097,82 @@
           },
           effects: []
         };
+      }
+
+      function emptyPersonalBest() {
+        return {
+          netWpm: 0,
+          rawWpm: 0,
+          accuracy: 0,
+          streak: 0,
+          score: 0
+        };
+      }
+
+      function readPersonalBests() {
+        try {
+          const stored = window.localStorage.getItem(PERSONAL_BESTS_KEY);
+          const parsed = stored ? JSON.parse(stored) : {};
+          return parsed && typeof parsed === "object" ? parsed : {};
+        } catch (error) {
+          return {};
+        }
+      }
+
+      function writePersonalBests(bests) {
+        try {
+          window.localStorage.setItem(PERSONAL_BESTS_KEY, JSON.stringify(bests));
+        } catch (error) {
+          return false;
+        }
+        return true;
+      }
+
+      function personalBestForDifficulty(difficulty) {
+        return {
+          ...emptyPersonalBest(),
+          ...(readPersonalBests()[difficulty] || {})
+        };
+      }
+
+      function difficultyLabel(difficulty) {
+        return difficulty.charAt(0).toUpperCase() + difficulty.slice(1);
+      }
+
+      function formatBestValue(key, value) {
+        if (!value) return "-";
+        return key === "accuracy" ? `${value}%` : value;
+      }
+
+      function updatePersonalBestsDisplay() {
+        const best = personalBestForDifficulty(state.difficulty);
+        els.personalBestsTitle.textContent = `${difficultyLabel(state.difficulty)} Personal Bests`;
+        els.bestNetWpm.textContent = formatBestValue("netWpm", best.netWpm);
+        els.bestRawWpm.textContent = formatBestValue("rawWpm", best.rawWpm);
+        els.bestAccuracy.textContent = formatBestValue("accuracy", best.accuracy);
+        els.bestStreak.textContent = formatBestValue("streak", best.streak);
+        els.bestScore.textContent = formatBestValue("score", best.score);
+      }
+
+      function recordPersonalBests(difficulty, result) {
+        const bests = readPersonalBests();
+        const previous = { ...emptyPersonalBest(), ...(bests[difficulty] || {}) };
+        const next = { ...previous };
+        const improved = [];
+
+        PERSONAL_BEST_FIELDS.forEach(field => {
+          if (result[field.key] > previous[field.key]) {
+            next[field.key] = result[field.key];
+            improved.push(field.label);
+          }
+        });
+
+        if (improved.length) {
+          bests[difficulty] = next;
+          writePersonalBests(bests);
+        }
+
+        return improved;
       }
 
       function beep(type) {
@@ -1297,19 +1473,36 @@
 
       function endGame(message, won = false) {
         state.mode = "over";
+        const finalRawWpm = currentRawWpm();
+        const finalNetWpm = currentNetWpm();
+        const finalAccuracy = currentAccuracy();
+        const finalMistypedKeys = currentMistypedKeys();
+        const finalAverageReactionTime = currentAverageReactionTime();
+        const finalWeakLetters = weakestLettersSummary();
+        const improvedBests = recordPersonalBests(state.difficulty, {
+          netWpm: finalNetWpm,
+          rawWpm: finalRawWpm,
+          accuracy: finalAccuracy,
+          streak: state.bestStreak,
+          score: state.score
+        });
+
         document.querySelector("#gameOverScreen h2").textContent = won ? "Victory" : "Game Over";
         els.gameOverText.textContent = message;
         els.finalScore.textContent = state.score;
-        els.finalRawWpm.textContent = currentRawWpm();
-        els.finalNetWpm.textContent = currentNetWpm();
-        els.finalAccuracy.textContent = `${currentAccuracy()}%`;
+        els.finalRawWpm.textContent = finalRawWpm;
+        els.finalNetWpm.textContent = finalNetWpm;
+        els.finalAccuracy.textContent = `${finalAccuracy}%`;
         els.finalStreak.textContent = state.streak;
         els.finalTotalKeys.textContent = state.totalTyped;
         els.finalCorrectKeys.textContent = state.correctTyped;
-        els.finalMistypedKeys.textContent = currentMistypedKeys();
+        els.finalMistypedKeys.textContent = finalMistypedKeys;
         els.finalLongestStreak.textContent = state.bestStreak;
-        els.finalReactionTime.textContent = `${currentAverageReactionTime()}s`;
-        els.finalWeakLetters.textContent = weakestLettersSummary();
+        els.finalReactionTime.textContent = `${finalAverageReactionTime}s`;
+        els.finalWeakLetters.textContent = finalWeakLetters;
+        els.newBestBanner.hidden = !improvedBests.length;
+        els.newBestBanner.textContent = improvedBests.length ? `New Best! ${improvedBests.join(", ")}` : "New Best!";
+        updatePersonalBestsDisplay();
         els.gameOverScreen.hidden = false;
         beep(won ? "level" : "hit");
       }
@@ -2287,6 +2480,7 @@
           button.classList.add("active");
           state.difficulty = button.dataset.difficulty;
           state.timeLeft = palettes[state.difficulty].time;
+          updatePersonalBestsDisplay();
           updateHud();
         });
       });
@@ -2315,6 +2509,7 @@
       window.addEventListener("keydown", handleKey);
 
       updateHud();
+      updatePersonalBestsDisplay();
       spawnEntity(650);
       spawnEntity(920);
       cancelAnimationFrame(raf);
