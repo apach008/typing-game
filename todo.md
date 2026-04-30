@@ -14,7 +14,7 @@
   - Add minimum spacing between active entities based on current speed, word length, and difficulty.
   - Avoid situations where two words arrive so close together that completing the first still guarantees failure on the second.
 
-- [ ] Make the first 10 seconds easier on every difficulty.
+- [x] Make the first 10 seconds easier on every difficulty.
   - Ramp into full speed and spawn rate over time.
   - This improves onboarding and makes early deaths feel less abrupt.
 

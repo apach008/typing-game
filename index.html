@@ -335,6 +335,9 @@
       ];
 
       const COUNTDOWN_SECONDS = 3;
+      const WARMUP_SECONDS = 10;
+      const WARMUP_START_SPEED_FACTOR = 0.72;
+      const WARMUP_START_SPAWN_FACTOR = 1.55;
       const HERO_HIT_X = 154;
       const BASE_SPAWN_X = 1040;
       const DIFFICULTY_REACTION_BUFFER = {
@@ -403,7 +406,19 @@
 
       function currentSpeed() {
         const cfg = palettes[state.difficulty];
-        return cfg.speed + state.level * cfg.speedLevel;
+        return (cfg.speed + state.level * cfg.speedLevel) * warmupSpeedFactor();
+      }
+
+      function warmupProgress() {
+        return Math.min(1, state.elapsed / WARMUP_SECONDS);
+      }
+
+      function warmupSpeedFactor() {
+        return WARMUP_START_SPEED_FACTOR + (1 - WARMUP_START_SPEED_FACTOR) * warmupProgress();
+      }
+
+      function warmupSpawnFactor() {
+        return WARMUP_START_SPAWN_FACTOR - (WARMUP_START_SPAWN_FACTOR - 1) * warmupProgress();
       }
 
       function spacingForWord(word, speed) {
@@ -576,7 +591,8 @@
         state.level = Math.min(9, 1 + Math.floor(state.elapsed / 18));
         if (state.spawnClock >= state.nextSpawn) {
           state.spawnClock = 0;
-          state.nextSpawn = Math.max(cfg.spawnMin, cfg.spawn - state.level * cfg.spawnLevel + Math.random() * 0.45);
+          const baseSpawn = Math.max(cfg.spawnMin, cfg.spawn - state.level * cfg.spawnLevel + Math.random() * 0.45);
+          state.nextSpawn = baseSpawn * warmupSpawnFactor();
           spawnEntity();
         }
 
