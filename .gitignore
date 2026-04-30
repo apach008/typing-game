@@ -1,5 +1,7 @@
 ralph_prompt.md
 loop_cc.ps1
+loop.ps1
 start_cc.bat
+start.bat
 .stream.jsonl
 .last_message.txt
