@@ -60,7 +60,7 @@
   - Bosses require a sequence of words or short phrases.
   - Show a boss health bar and attack telegraphs.
 
-- [ ] Add level themes.
+- [x] Add level themes.
   - Forest, ruins, lava cave, sky bridge, castle gate.
   - Each theme can introduce one new hazard pattern.
 

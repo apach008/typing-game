@@ -364,6 +364,81 @@
         powerup: { type: "powerup", category: "powerup", weight: 7, y: 380, w: 34, h: 34, timingScale: 1.2, scoreScale: 1.1, optional: true }
       };
 
+      const levelThemes = [
+        {
+          id: "forest",
+          label: "Forest",
+          sky: ["#19335a", "#32647a", "#172826", "#0b1317"],
+          sun: "#f9d879",
+          far: "#1c3145",
+          farTop: "#223a50",
+          mid: "#274235",
+          midTop: "#4b8953",
+          ground: "#22252b",
+          groundTrim: "#384044",
+          shadow: "#15191d",
+          hazards: { obstacle: 1.25, bridge: 0.75, flying: 0.85 }
+        },
+        {
+          id: "ruins",
+          label: "Ruins",
+          sky: ["#27324c", "#59616d", "#2a2e36", "#15171c"],
+          sun: "#d4c7a1",
+          far: "#313948",
+          farTop: "#444b5b",
+          mid: "#4a4b4c",
+          midTop: "#68675f",
+          ground: "#2b2b2b",
+          groundTrim: "#56534a",
+          shadow: "#18191b",
+          hazards: { shielded: 1.55, bridge: 1.25, chest: 1.15 }
+        },
+        {
+          id: "lava",
+          label: "Lava Cave",
+          sky: ["#2b1220", "#5d2535", "#301817", "#110b0c"],
+          sun: "#ff9a3c",
+          far: "#3a1e2b",
+          farTop: "#512b35",
+          mid: "#4f2525",
+          midTop: "#7b3a2d",
+          ground: "#2b1c1c",
+          groundTrim: "#c7572f",
+          shadow: "#110909",
+          hazards: { obstacle: 1.35, enemy: 1.2, powerup: 0.85 },
+          spawnScale: 0.96
+        },
+        {
+          id: "sky",
+          label: "Sky Bridge",
+          sky: ["#255077", "#68a7be", "#37566a", "#182431"],
+          sun: "#fff0a8",
+          far: "#4a6380",
+          farTop: "#6f86a2",
+          mid: "#466475",
+          midTop: "#8ab4c0",
+          ground: "#253142",
+          groundTrim: "#92a6b8",
+          shadow: "#141a24",
+          hazards: { flying: 1.8, bridge: 1.45, obstacle: 0.75 }
+        },
+        {
+          id: "castle",
+          label: "Castle Gate",
+          sky: ["#202942", "#3b4157", "#242838", "#11131b"],
+          sun: "#f5c452",
+          far: "#272d43",
+          farTop: "#3d435c",
+          mid: "#343847",
+          midTop: "#5a5f71",
+          ground: "#232530",
+          groundTrim: "#555c73",
+          shadow: "#11131a",
+          hazards: { enemy: 1.3, shielded: 1.45, flying: 1.15, chest: 0.75 },
+          spawnScale: 0.98
+        }
+      ];
+
       const powerupTypes = [
         { id: "time", label: "Time", seconds: 8 },
         { id: "focus", label: "Focus", duration: 6 },
@@ -432,6 +507,7 @@
           comboBurstDuration: 1,
           comboBurstLabel: "",
           level: 1,
+          themeIndex: 0,
           boss: null,
           defeatedBossLevels: [],
           action: "run",
@@ -473,14 +549,23 @@
       }
 
       function pickEntityKind() {
+        const theme = currentTheme();
         const kinds = Object.values(entityKinds);
-        const totalWeight = kinds.reduce((sum, kind) => sum + kind.weight, 0);
+        const weightedKinds = kinds.map(kind => ({
+          kind,
+          weight: kind.weight * (theme.hazards[kind.type] || 1)
+        }));
+        const totalWeight = weightedKinds.reduce((sum, item) => sum + item.weight, 0);
         let roll = Math.random() * totalWeight;
-        for (const kind of kinds) {
-          roll -= kind.weight;
-          if (roll <= 0) return kind;
+        for (const item of weightedKinds) {
+          roll -= item.weight;
+          if (roll <= 0) return item.kind;
         }
         return entityKinds.obstacle;
+      }
+
+      function currentTheme() {
+        return levelThemes[Math.min(state.themeIndex, levelThemes.length - 1)];
       }
 
       function currentSpeed() {
@@ -832,7 +917,12 @@
         const cfg = palettes[state.difficulty];
         state.elapsed += dt;
         state.timeLeft -= dt;
+        const previousTheme = state.themeIndex;
         state.level = Math.min(9, 1 + Math.floor(state.elapsed / 18));
+        state.themeIndex = Math.min(levelThemes.length - 1, state.level - 1);
+        if (state.themeIndex !== previousTheme) {
+          triggerComboBurst(currentTheme().label, 1.05);
+        }
         const speed = currentSpeed();
         state.distance += speed * dt;
         if (!state.boss && state.level % BOSS_LEVEL_INTERVAL === 0 && !state.defeatedBossLevels.includes(state.level)) {
@@ -849,8 +939,9 @@
 
         if (!state.boss && state.spawnClock >= state.nextSpawn) {
           state.spawnClock = 0;
+          const theme = currentTheme();
           const baseSpawn = Math.max(cfg.spawnMin, cfg.spawn - state.level * cfg.spawnLevel + Math.random() * 0.45);
-          state.nextSpawn = baseSpawn * warmupSpawnFactor();
+          state.nextSpawn = baseSpawn * warmupSpawnFactor() * (theme.spawnScale || 1);
           spawnEntity();
         }
 
@@ -884,32 +975,44 @@
       }
 
       function drawBackground(t) {
+        const theme = currentTheme();
         const sky = ctx.createLinearGradient(0, 0, 0, canvas.height);
-        sky.addColorStop(0, "#19335a");
-        sky.addColorStop(0.58, "#32647a");
-        sky.addColorStop(0.59, "#172826");
-        sky.addColorStop(1, "#0b1317");
+        sky.addColorStop(0, theme.sky[0]);
+        sky.addColorStop(0.58, theme.sky[1]);
+        sky.addColorStop(0.59, theme.sky[2]);
+        sky.addColorStop(1, theme.sky[3]);
         ctx.fillStyle = sky;
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-        ctx.fillStyle = "#f9d879";
+        ctx.fillStyle = theme.sun;
         ctx.fillRect(752, 58, 36, 36);
-        ctx.fillStyle = "#26395f";
         for (let i = 0; i < 7; i++) {
           const x = ((i * 180 - t * 18) % 1160) - 120;
-          pixelRect(x, 260, 160, 90, "#1c3145");
-          pixelRect(x + 50, 220, 82, 40, "#223a50");
+          pixelRect(x, 260, 160, 90, theme.far);
+          pixelRect(x + 50, 220, 82, 40, theme.farTop);
         }
         for (let i = 0; i < 12; i++) {
           const x = ((i * 112 - t * 70) % 1100) - 80;
-          pixelRect(x, 378, 28, 66, "#274235");
-          pixelRect(x - 18, 350, 64, 38, "#3a6d44");
-          pixelRect(x - 8, 330, 44, 34, "#4b8953");
+          if (theme.id === "forest") {
+            pixelRect(x, 378, 28, 66, theme.mid);
+            pixelRect(x - 18, 350, 64, 38, "#3a6d44");
+            pixelRect(x - 8, 330, 44, 34, theme.midTop);
+          } else if (theme.id === "sky") {
+            pixelRect(x - 26, 354, 92, 18, theme.midTop);
+            pixelRect(x, 376, 36, 52, theme.mid);
+          } else {
+            pixelRect(x, 362, 34, 82, theme.mid);
+            pixelRect(x - 10, 346, 54, 18, theme.midTop);
+            pixelRect(x + 8, 316, 14, 30, theme.midTop);
+          }
         }
-        pixelRect(0, 444, canvas.width, 96, "#22252b");
+        pixelRect(0, 444, canvas.width, 96, theme.ground);
         for (let x = -80 + (Math.floor(-state.distance) % 48); x < canvas.width; x += 48) {
-          pixelRect(x, 444, 44, 10, "#384044");
-          pixelRect(x + 8, 486, 18, 8, "#15191d");
+          pixelRect(x, 444, 44, 10, theme.groundTrim);
+          pixelRect(x + 8, 486, 18, 8, theme.shadow);
+          if (theme.id === "lava" && x % 96 === 0) {
+            pixelRect(x + 18, 454, 18, 6, "#ff9a3c");
+          }
         }
       }
 
