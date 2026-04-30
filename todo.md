@@ -71,7 +71,7 @@
 
 ## Priority 2: Typing Experience
 
-- [ ] Improve word progression feedback.
+- [x] Improve word progression feedback.
   - Highlight typed letters directly in the word bubble above the current target.
   - Keep the bottom typebar, but make the in-world target readable without looking away from the action.
 

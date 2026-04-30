@@ -1190,19 +1190,39 @@
         ctx.fillText(`Boss ${boss.wordIndex + 1}/${boss.words.length}`, x + w / 2, y + 56);
       }
 
+      function drawCenteredSegments(segments, centerX, baselineY) {
+        const totalWidth = segments.reduce((sum, segment) => sum + ctx.measureText(segment.text).width, 0);
+        let x = centerX - totalWidth / 2;
+        ctx.textAlign = "left";
+        for (const segment of segments) {
+          ctx.fillStyle = segment.color;
+          ctx.fillText(segment.text, x, baselineY);
+          x += ctx.measureText(segment.text).width;
+        }
+        ctx.textAlign = "center";
+      }
+
       function drawWordBubble(entity) {
         ctx.font = "bold 22px Trebuchet MS, sans-serif";
         ctx.textAlign = "center";
+        const isTarget = entity === currentTarget();
         const progress = entity.words.length > 1 ? `${entity.wordIndex + 1}/${entity.words.length} ` : "";
         const powerupLabel = entity.powerup ? `${entity.powerup.label}: ` : "";
-        const label = `${powerupLabel}${progress}${entity.word}`;
+        const prefix = `${powerupLabel}${progress}`;
+        const typed = isTarget ? entity.word.slice(0, state.typed.length) : "";
+        const pending = isTarget ? entity.word.slice(state.typed.length) : entity.word;
+        const label = `${prefix}${entity.word}`;
         const width = Math.max(74, ctx.measureText(label).width + 22);
         const x = entity.x + entity.w / 2 - width / 2;
         const y = entity.y - entity.h - 56;
         pixelRect(x, y, width, 34, "#111827");
-        pixelRect(x + 3, y + 3, width - 6, 28, entity === currentTarget() ? "#37476c" : entity.optional ? "#26485a" : "#253049");
-        ctx.fillStyle = entity.type === "powerup" ? "#d8ffd1" : entity.optional ? "#b9fbff" : "#ffe9a6";
-        ctx.fillText(label, entity.x + entity.w / 2, y + 24);
+        pixelRect(x + 3, y + 3, width - 6, 28, isTarget ? "#37476c" : entity.optional ? "#26485a" : "#253049");
+        const pendingColor = entity.type === "powerup" ? "#d8ffd1" : entity.optional ? "#b9fbff" : "#ffe9a6";
+        drawCenteredSegments([
+          { text: prefix, color: pendingColor },
+          { text: typed, color: "#7cf4a1" },
+          { text: pending, color: pendingColor }
+        ], entity.x + entity.w / 2, y + 24);
       }
 
       function draw() {
