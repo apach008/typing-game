@@ -543,6 +543,37 @@
       grid-column: 1 / -1;
     }
 
+    .final-stat-chart {
+      padding: 12px 12px 8px;
+    }
+
+    .final-chart-legend {
+      display: flex;
+      gap: 14px;
+      font-size: 11px;
+      color: var(--muted);
+      text-transform: uppercase;
+      margin: 6px 0 6px;
+    }
+
+    .final-chart-legend span::before {
+      content: "";
+      display: inline-block;
+      width: 10px;
+      height: 10px;
+      margin-right: 5px;
+      vertical-align: -1px;
+    }
+
+    .final-chart-legend-net::before { background: #7cf4a1; }
+    .final-chart-legend-acc::before { background: #ffd271; }
+
+    #finalChart {
+      width: 100%;
+      height: auto;
+      display: block;
+    }
+
     .typebar {
       position: absolute;
       left: 50%;
@@ -823,6 +854,14 @@
             <div class="final-stat"><span>Longest Streak</span><strong id="finalLongestStreak">0</strong></div>
             <div class="final-stat"><span>Avg Reaction</span><strong id="finalReactionTime">0.00s</strong></div>
             <div class="final-stat final-stat-wide"><span>Needs Work</span><strong id="finalWeakLetters">None</strong></div>
+            <div class="final-stat final-stat-wide final-stat-chart" id="finalChartWrap" hidden>
+              <span>Pace Over Time</span>
+              <div class="final-chart-legend">
+                <span class="final-chart-legend-net">Net WPM</span>
+                <span class="final-chart-legend-acc">Accuracy</span>
+              </div>
+              <canvas id="finalChart" width="512" height="180" aria-label="Net WPM and accuracy over time"></canvas>
+            </div>
           </div>
           <button class="primary" id="againButton">Run Again</button>
         </div>
@@ -878,6 +917,8 @@
         finalLongestStreak: document.getElementById("finalLongestStreak"),
         finalReactionTime: document.getElementById("finalReactionTime"),
         finalWeakLetters: document.getElementById("finalWeakLetters"),
+        finalChartWrap: document.getElementById("finalChartWrap"),
+        finalChart: document.getElementById("finalChart"),
         personalBestsTitle: document.getElementById("personalBestsTitle"),
         bestNetWpm: document.getElementById("bestNetWpm"),
         bestRawWpm: document.getElementById("bestRawWpm"),
@@ -1522,6 +1563,8 @@
           adaptiveCompleted: 0,
           adaptiveMisses: 0,
           letterMistakes: {},
+          samples: [],
+          sampleClock: 0,
           completedChars: 0,
           completedWords: 0,
           streak: 0,
@@ -2312,6 +2355,10 @@
         const finalMistypedKeys = currentMistypedKeys();
         const finalAverageReactionTime = currentAverageReactionTime();
         const finalWeakLetters = weakestLettersSummary();
+        const last = state.samples[state.samples.length - 1];
+        if (state.elapsed > 0 && (!last || state.elapsed - last.t > 0.05)) {
+          state.samples.push({ t: state.elapsed, netWpm: finalNetWpm, accuracy: finalAccuracy });
+        }
         recordLifetimeStats();
         const improvedBests = recordPersonalBests(state.difficulty, {
           netWpm: finalNetWpm,
@@ -2334,6 +2381,7 @@
         els.finalLongestStreak.textContent = state.bestStreak;
         els.finalReactionTime.textContent = `${finalAverageReactionTime}s`;
         els.finalWeakLetters.textContent = finalWeakLetters;
+        drawFinalChart(state.samples);
         els.newBestBanner.hidden = !improvedBests.length;
         els.newBestBanner.textContent = improvedBests.length ? `New Best! ${improvedBests.join(", ")}` : "New Best!";
         updatePersonalBestsDisplay();
@@ -2638,6 +2686,117 @@
         return (state.reactionTotal / state.reactionCount).toFixed(2);
       }
 
+      function drawFinalChart(samples) {
+        const canvas = els.finalChart;
+        const wrap = els.finalChartWrap;
+        if (!canvas || !wrap) return;
+        if (!samples || samples.length < 2) {
+          wrap.hidden = true;
+          return;
+        }
+        wrap.hidden = false;
+        const c = canvas.getContext("2d");
+        const w = canvas.width;
+        const h = canvas.height;
+        c.clearRect(0, 0, w, h);
+
+        const padL = 36;
+        const padR = 40;
+        const padT = 14;
+        const padB = 22;
+        const plotW = w - padL - padR;
+        const plotH = h - padT - padB;
+
+        const maxT = Math.max(samples[samples.length - 1].t, 1);
+        const peakWpm = samples.reduce((m, s) => Math.max(m, s.netWpm), 0);
+        const wpmAxis = Math.max(40, Math.ceil(peakWpm / 10) * 10);
+
+        c.strokeStyle = "#2c365a";
+        c.lineWidth = 1;
+        for (let i = 0; i <= 4; i++) {
+          const y = padT + (plotH * i) / 4;
+          c.beginPath();
+          c.moveTo(padL, y);
+          c.lineTo(padL + plotW, y);
+          c.stroke();
+        }
+
+        c.fillStyle = "#7c89af";
+        c.font = "11px sans-serif";
+        c.textAlign = "right";
+        c.textBaseline = "middle";
+        c.fillText(String(wpmAxis), padL - 4, padT);
+        c.fillText("0", padL - 4, padT + plotH);
+        c.textAlign = "left";
+        c.fillText("100%", padL + plotW + 4, padT);
+        c.fillText("0%", padL + plotW + 4, padT + plotH);
+        c.textAlign = "left";
+        c.textBaseline = "top";
+        c.fillText("0s", padL, padT + plotH + 4);
+        c.textAlign = "right";
+        c.fillText(`${Math.round(maxT)}s`, padL + plotW, padT + plotH + 4);
+
+        const xFor = t => padL + (t / maxT) * plotW;
+        const yForWpm = v => padT + plotH - (Math.min(v, wpmAxis) / wpmAxis) * plotH;
+        const yForAcc = v => padT + plotH - (v / 100) * plotH;
+
+        c.lineWidth = 2;
+        c.strokeStyle = "#7cf4a1";
+        c.beginPath();
+        samples.forEach((s, i) => {
+          const x = xFor(s.t);
+          const y = yForWpm(s.netWpm);
+          if (i === 0) c.moveTo(x, y); else c.lineTo(x, y);
+        });
+        c.stroke();
+
+        c.strokeStyle = "#ffd271";
+        c.beginPath();
+        samples.forEach((s, i) => {
+          const x = xFor(s.t);
+          const y = yForAcc(s.accuracy);
+          if (i === 0) c.moveTo(x, y); else c.lineTo(x, y);
+        });
+        c.stroke();
+
+        let peakIdx = 0;
+        let dipIdx = 0;
+        for (let i = 1; i < samples.length; i++) {
+          if (samples[i].netWpm > samples[peakIdx].netWpm) peakIdx = i;
+          if (samples[i].accuracy < samples[dipIdx].accuracy) dipIdx = i;
+        }
+
+        const peak = samples[peakIdx];
+        const px = xFor(peak.t);
+        const py = yForWpm(peak.netWpm);
+        c.fillStyle = "#7cf4a1";
+        c.beginPath();
+        c.arc(px, py, 4, 0, Math.PI * 2);
+        c.fill();
+        c.fillStyle = "#fff3c4";
+        c.font = "bold 11px sans-serif";
+        c.textAlign = "center";
+        c.textBaseline = "bottom";
+        const peakLabel = `peak ${peak.netWpm}`;
+        const peakLabelX = Math.min(Math.max(px, padL + 24), padL + plotW - 24);
+        c.fillText(peakLabel, peakLabelX, Math.max(py - 6, padT + 10));
+
+        const dip = samples[dipIdx];
+        if (dip.accuracy < 100) {
+          const dx = xFor(dip.t);
+          const dy = yForAcc(dip.accuracy);
+          c.fillStyle = "#ffd271";
+          c.beginPath();
+          c.arc(dx, dy, 4, 0, Math.PI * 2);
+          c.fill();
+          c.fillStyle = "#fff3c4";
+          c.textAlign = "center";
+          c.textBaseline = "top";
+          const dipLabelX = Math.min(Math.max(dx, padL + 24), padL + plotW - 24);
+          c.fillText(`dip ${dip.accuracy}%`, dipLabelX, Math.min(dy + 6, padT + plotH - 14));
+        }
+      }
+
       function updateHud() {
         els.wpm.textContent = currentNetWpm();
         els.accuracy.textContent = `${currentAccuracy()}%`;
@@ -2691,6 +2850,11 @@
         const cfg = palettes[state.difficulty];
         state.elapsed += dt;
         if (runModes[state.runMode].timed) state.timeLeft -= dt;
+        state.sampleClock += dt;
+        while (state.sampleClock >= 1) {
+          state.sampleClock -= 1;
+          state.samples.push({ t: state.samples.length + 1, netWpm: currentNetWpm(), accuracy: currentAccuracy() });
+        }
         const previousTheme = state.themeIndex;
         state.level = targetLevel();
         state.themeIndex = Math.min(levelThemes.length - 1, state.level - 1);

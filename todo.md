@@ -7,7 +7,7 @@ To do, ordered by impact (highest first):
   - On resume, replay the 3s countdown so the player isn't punished by an off-screen heart loss.
   - Standard expectation in any timed game; without it, alt-tabbing silently kills runs.
 
-- [ ] Add a live WPM and accuracy graph to the game-over screen.
+- [x] Add a live WPM and accuracy graph to the game-over screen.
   - Sample net WPM and rolling accuracy each second during a run; render a small line chart in the final-grid panel.
   - Highlight the best WPM peak and lowest accuracy dip so players can see *where* they fell apart, not just the average.
   - This is the single most-cited reason serious typists stick with Monkeytype/keybr — summary numbers alone don't teach.
