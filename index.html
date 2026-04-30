@@ -340,6 +340,37 @@
       margin-top: 18px;
     }
 
+    .settings-reset-grid {
+      display: grid;
+      gap: 8px;
+    }
+
+    .settings-reset-grid button {
+      width: 100%;
+    }
+
+    .settings-reset-grid button.confirming {
+      border-color: #ff6a61;
+      background: #512d47;
+      color: #fff3c4;
+    }
+
+    .settings-note {
+      margin: 8px 0 0;
+      color: #ddd5b5;
+      font-size: 0.86rem;
+      line-height: 1.35;
+    }
+
+    .settings-status {
+      min-height: 1.2em;
+      margin: 8px 0 0;
+      color: #ffe28b;
+      font-size: 0.86rem;
+      font-weight: 700;
+      line-height: 1.35;
+    }
+
     .drill-panel {
       margin: 16px 0;
       border: 1px solid #404d70;
@@ -1164,6 +1195,15 @@
               </button>
             </div>
           </section>
+          <section class="settings-section">
+            <h3>Data</h3>
+            <div class="settings-reset-grid">
+              <button id="resetPersonalBestsButton" type="button" data-confirm-label="Reset personal bests?">Reset Personal Bests</button>
+              <button id="clearLifetimeStatsButton" type="button" data-confirm-label="Clear lifetime stats?">Clear Lifetime Stats</button>
+            </div>
+            <p class="settings-note">Each reset needs a second click to confirm. Settings, achievements, and Daily history stay intact.</p>
+            <p class="settings-status" id="settingsStatus" role="status" aria-live="polite"></p>
+          </section>
           <div class="settings-actions">
             <button class="primary" id="closeSettingsButton" type="button">Done</button>
           </div>
@@ -1289,6 +1329,9 @@
         startSettingsButton: document.getElementById("startSettingsButton"),
         pauseSettingsButton: document.getElementById("pauseSettingsButton"),
         closeSettingsButton: document.getElementById("closeSettingsButton"),
+        resetPersonalBestsButton: document.getElementById("resetPersonalBestsButton"),
+        clearLifetimeStatsButton: document.getElementById("clearLifetimeStatsButton"),
+        settingsStatus: document.getElementById("settingsStatus"),
         muteButtons: Array.from(document.querySelectorAll(".sound-toggle"))
       };
 
@@ -1958,6 +2001,7 @@
       let defaultDifficulty = readDefaultDifficulty();
       let defaultTypingMode = readDefaultTypingMode();
       let settingsReturnFocus = null;
+      let settingsResetConfirm = "";
       let state = makeState();
       let last = performance.now();
       let raf = 0;
@@ -2671,15 +2715,76 @@
 
       function openSettings(returnFocusElement) {
         settingsReturnFocus = returnFocusElement || document.activeElement;
+        clearSettingsResetConfirmation();
         updateSettingsDefaultButtons();
         els.settingsScreen.hidden = false;
         focusWithoutScroll(els.closeSettingsButton);
       }
 
       function closeSettings() {
+        clearSettingsResetConfirmation();
         els.settingsScreen.hidden = true;
         focusWithoutScroll(settingsReturnFocus);
         settingsReturnFocus = null;
+      }
+
+      function clearSettingsResetConfirmation() {
+        settingsResetConfirm = "";
+        [
+          els.resetPersonalBestsButton,
+          els.clearLifetimeStatsButton
+        ].forEach(button => {
+          if (!button) return;
+          button.classList.remove("confirming");
+          button.textContent = button.dataset.originalLabel || button.textContent;
+        });
+        if (els.settingsStatus) els.settingsStatus.textContent = "";
+      }
+
+      function removeStorageItem(key) {
+        try {
+          window.localStorage.removeItem(key);
+        } catch (error) {
+          return false;
+        }
+        return true;
+      }
+
+      function requestSettingsReset(action, button, confirmedCallback) {
+        if (!button) return;
+        if (!button.dataset.originalLabel) button.dataset.originalLabel = button.textContent;
+
+        if (settingsResetConfirm !== action) {
+          clearSettingsResetConfirmation();
+          settingsResetConfirm = action;
+          button.classList.add("confirming");
+          button.textContent = button.dataset.confirmLabel || "Click again to confirm";
+          if (els.settingsStatus) els.settingsStatus.textContent = "Click the same reset button again to confirm.";
+          return;
+        }
+
+        const succeeded = confirmedCallback();
+        clearSettingsResetConfirmation();
+        if (els.settingsStatus) {
+          els.settingsStatus.textContent = succeeded ? "Data reset." : "Could not reset data. Check browser storage permissions.";
+        }
+      }
+
+      function resetPersonalBests() {
+        requestSettingsReset("personalBests", els.resetPersonalBestsButton, () => {
+          const succeeded = removeStorageItem(PERSONAL_BESTS_KEY);
+          updatePersonalBestsDisplay();
+          return succeeded;
+        });
+      }
+
+      function clearLifetimeStats() {
+        requestSettingsReset("lifetimeStats", els.clearLifetimeStatsButton, () => {
+          const lifetimeSucceeded = removeStorageItem(LIFETIME_STATS_KEY);
+          const recentRunsSucceeded = removeStorageItem(RECENT_RUNS_KEY);
+          updateLifetimeStatsDisplay();
+          return lifetimeSucceeded && recentRunsSucceeded;
+        });
       }
 
       function updateMuteButtons() {
@@ -4484,6 +4589,8 @@
       els.startSettingsButton.addEventListener("click", () => openSettings(els.startSettingsButton));
       els.pauseSettingsButton.addEventListener("click", () => openSettings(els.pauseSettingsButton));
       els.closeSettingsButton.addEventListener("click", closeSettings);
+      els.resetPersonalBestsButton.addEventListener("click", resetPersonalBests);
+      els.clearLifetimeStatsButton.addEventListener("click", clearLifetimeStats);
       els.muteButtons.forEach(button => button.addEventListener("click", toggleSoundMuted));
       document.querySelectorAll("[data-sound-theme]").forEach(button => {
         button.addEventListener("click", () => setKeypressSoundTheme(button.dataset.soundTheme));

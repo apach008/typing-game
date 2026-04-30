@@ -53,7 +53,7 @@ To do, ordered by impact (highest first):
   - Date, mode, difficulty, net WPM, accuracy, streak. Show as a compact list under the lifetime panel.
   - PBs alone hide the trend ("am I getting faster or just lucky on one run?"); recent runs answer that.
 
-- [ ] Add reset controls in Settings.
+- [x] Add reset controls in Settings.
   - "Reset personal bests" and "Clear lifetime stats" buttons with a confirm step.
   - Currently there's no way out of bad/test data; users on shared machines have no privacy option either.
 
