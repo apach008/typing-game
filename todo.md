@@ -90,7 +90,7 @@
   - Ease pressure if accuracy drops below a threshold.
   - Keep manual difficulty levels, but let them tune the adaptive range.
 
-- [ ] Track raw WPM and net WPM.
+- [x] Track raw WPM and net WPM.
   - Raw WPM: all typed characters.
   - Net WPM: correct completed words minus typo penalty.
   - Final stats should show both for typing-practice value.

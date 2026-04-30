@@ -277,7 +277,7 @@
 <body>
   <main class="game-shell">
     <section class="hud" aria-label="Game stats">
-      <div class="stat"><span>WPM</span><strong id="wpm">0</strong></div>
+      <div class="stat"><span>Net WPM</span><strong id="wpm">0</strong></div>
       <div class="stat"><span>Accuracy</span><strong id="accuracy">100%</strong></div>
       <div class="stat"><span>Streak</span><strong id="streak">0</strong></div>
       <div class="stat"><span>Timer</span><strong id="timer">90</strong></div>
@@ -320,7 +320,8 @@
           <p id="gameOverText">The trail ends here.</p>
           <div class="final-grid">
             <div class="final-stat"><span>Score</span><strong id="finalScore">0</strong></div>
-            <div class="final-stat"><span>WPM</span><strong id="finalWpm">0</strong></div>
+            <div class="final-stat"><span>Raw WPM</span><strong id="finalRawWpm">0</strong></div>
+            <div class="final-stat"><span>Net WPM</span><strong id="finalNetWpm">0</strong></div>
             <div class="final-stat"><span>Accuracy</span><strong id="finalAccuracy">100%</strong></div>
             <div class="final-stat"><span>Best Streak</span><strong id="finalStreak">0</strong></div>
           </div>
@@ -347,7 +348,8 @@
         startScreen: document.getElementById("startScreen"),
         gameOverScreen: document.getElementById("gameOverScreen"),
         finalScore: document.getElementById("finalScore"),
-        finalWpm: document.getElementById("finalWpm"),
+        finalRawWpm: document.getElementById("finalRawWpm"),
+        finalNetWpm: document.getElementById("finalNetWpm"),
         finalAccuracy: document.getElementById("finalAccuracy"),
         finalStreak: document.getElementById("finalStreak"),
         gameOverText: document.getElementById("gameOverText")
@@ -854,7 +856,8 @@
         document.querySelector("#gameOverScreen h2").textContent = won ? "Victory" : "Game Over";
         els.gameOverText.textContent = message;
         els.finalScore.textContent = state.score;
-        els.finalWpm.textContent = currentWpm();
+        els.finalRawWpm.textContent = currentRawWpm();
+        els.finalNetWpm.textContent = currentNetWpm();
         els.finalAccuracy.textContent = `${currentAccuracy()}%`;
         els.finalStreak.textContent = state.bestStreak;
         els.gameOverScreen.hidden = false;
@@ -1059,9 +1062,19 @@
         }
       }
 
-      function currentWpm() {
+      function runMinutes() {
         const minutes = Math.max(state.elapsed / 60, 1 / 60);
-        return Math.round((state.completedChars / 5) / minutes);
+        return minutes;
+      }
+
+      function currentRawWpm() {
+        return Math.round((state.totalTyped / 5) / runMinutes());
+      }
+
+      function currentNetWpm() {
+        const typoPenalty = state.totalTyped - state.correctTyped;
+        const completedWords = state.completedChars / 5;
+        return Math.max(0, Math.round((completedWords - typoPenalty) / runMinutes()));
       }
 
       function currentAccuracy() {
@@ -1070,7 +1083,7 @@
       }
 
       function updateHud() {
-        els.wpm.textContent = currentWpm();
+        els.wpm.textContent = currentNetWpm();
         els.accuracy.textContent = `${currentAccuracy()}%`;
         els.streak.textContent = state.streak;
         els.timer.textContent = runModes[state.runMode].timed ? Math.max(0, Math.ceil(state.timeLeft)) : `${Math.floor(state.elapsed)}s`;
