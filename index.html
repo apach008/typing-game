@@ -143,6 +143,7 @@
 
     .difficulty,
     .run-modes,
+    .run-lengths,
     .typing-modes,
     .drill-suggestions,
     .settings-options {
@@ -154,6 +155,10 @@
 
     .run-modes {
       grid-template-columns: repeat(4, 1fr);
+    }
+
+    .run-lengths {
+      grid-template-columns: repeat(3, 1fr);
     }
 
     .menu-actions {
@@ -189,6 +194,7 @@
 
     .difficulty button,
     .run-modes button,
+    .run-lengths button,
     .typing-modes button,
     .settings-options .described-option {
       display: grid;
@@ -201,6 +207,7 @@
     }
 
     .typing-modes button,
+    .run-lengths button,
     .settings-options .described-option {
       min-height: 74px;
     }
@@ -211,12 +218,14 @@
 
     .difficulty-label,
     .run-mode-label,
+    .run-length-label,
     .mode-label {
       display: block;
     }
 
     .difficulty-description,
     .run-mode-description,
+    .run-length-description,
     .mode-description {
       display: block;
       color: #ddd5b5;
@@ -227,8 +236,10 @@
 
     .difficulty button.active .difficulty-description,
     .run-modes button.active .run-mode-description,
+    .run-lengths button.active .run-length-description,
     .typing-modes button.active .mode-description,
     .settings-options .described-option.active .difficulty-description,
+    .settings-options .described-option.active .run-length-description,
     .settings-options .described-option.active .mode-description {
       color: #fff0bc;
     }
@@ -945,6 +956,7 @@
 
       .difficulty,
       .run-modes,
+      .run-lengths,
       .typing-modes,
       .drill-suggestions,
       .settings-options,
@@ -1031,7 +1043,7 @@
           <div class="difficulty" role="group" aria-label="Difficulty">
             <button class="active" data-difficulty="easy">
               <span class="difficulty-label">Easy</span>
-              <span class="difficulty-description">Short common words, slow threats, forgiving timers.</span>
+              <span class="difficulty-description">Short common words, slow threats, forgiving pacing.</span>
             </button>
             <button data-difficulty="normal">
               <span class="difficulty-label">Normal</span>
@@ -1040,6 +1052,20 @@
             <button data-difficulty="hard">
               <span class="difficulty-label">Hard</span>
               <span class="difficulty-description">Longer, rarer words, dense threats, strict pacing.</span>
+            </button>
+          </div>
+          <div class="run-lengths" role="group" aria-label="Run length">
+            <button data-run-length="30">
+              <span class="run-length-label">30s Sprint</span>
+              <span class="run-length-description">Fast warmup run.</span>
+            </button>
+            <button class="active" data-run-length="60">
+              <span class="run-length-label">60s Standard</span>
+              <span class="run-length-description">Classic typing test length.</span>
+            </button>
+            <button data-run-length="120">
+              <span class="run-length-label">120s Endurance</span>
+              <span class="run-length-description">Longer focus session.</span>
             </button>
           </div>
           <div class="typing-modes" role="group" aria-label="Typing mode">
@@ -1175,6 +1201,23 @@
               <button class="described-option" type="button" data-default-difficulty="hard">
                 <span class="difficulty-label">Hard</span>
                 <span class="difficulty-description">Longer words, strict pacing.</span>
+              </button>
+            </div>
+          </section>
+          <section class="settings-section">
+            <h3>Default Run Length</h3>
+            <div class="settings-options" role="group" aria-label="Default run length">
+              <button class="described-option" type="button" data-default-run-length="30">
+                <span class="run-length-label">30s Sprint</span>
+                <span class="run-length-description">Fast warmup run.</span>
+              </button>
+              <button class="described-option" type="button" data-default-run-length="60">
+                <span class="run-length-label">60s Standard</span>
+                <span class="run-length-description">Classic typing test length.</span>
+              </button>
+              <button class="described-option" type="button" data-default-run-length="120">
+                <span class="run-length-label">120s Endurance</span>
+                <span class="run-length-description">Longer focus session.</span>
               </button>
             </div>
           </section>
@@ -1336,9 +1379,9 @@
       };
 
       const palettes = {
-        easy: { speed: 205, speedLevel: 7, spawn: 1.55, spawnLevel: 0.035, spawnMin: 1.05, time: 105, wordMin: 3, wordMax: 5, adaptiveRange: 0.7, adaptiveSpeed: 0.08, adaptiveSpawn: 0.14, adaptiveWord: 1 },
-        normal: { speed: 275, speedLevel: 9, spawn: 1.2, spawnLevel: 0.045, spawnMin: 0.9, time: 95, wordMin: 4, wordMax: 7, adaptiveRange: 1, adaptiveSpeed: 0.12, adaptiveSpawn: 0.18, adaptiveWord: 2 },
-        hard: { speed: 345, speedLevel: 11, spawn: 0.95, spawnLevel: 0.05, spawnMin: 0.78, time: 85, wordMin: 5, wordMax: 8, adaptiveRange: 1.25, adaptiveSpeed: 0.15, adaptiveSpawn: 0.22, adaptiveWord: 2 }
+        easy: { speed: 205, speedLevel: 7, spawn: 1.55, spawnLevel: 0.035, spawnMin: 1.05, wordMin: 3, wordMax: 5, adaptiveRange: 0.7, adaptiveSpeed: 0.08, adaptiveSpawn: 0.14, adaptiveWord: 1 },
+        normal: { speed: 275, speedLevel: 9, spawn: 1.2, spawnLevel: 0.045, spawnMin: 0.9, wordMin: 4, wordMax: 7, adaptiveRange: 1, adaptiveSpeed: 0.12, adaptiveSpawn: 0.18, adaptiveWord: 2 },
+        hard: { speed: 345, speedLevel: 11, spawn: 0.95, spawnLevel: 0.05, spawnMin: 0.78, wordMin: 5, wordMax: 8, adaptiveRange: 1.25, adaptiveSpeed: 0.15, adaptiveSpawn: 0.22, adaptiveWord: 2 }
       };
 
       const runModes = {
@@ -1970,6 +2013,7 @@
       const SOUND_MUTED_KEY = "typequest-sound-muted-v1";
       const KEYPRESS_SOUND_THEME_KEY = "typequest-keypress-sound-theme-v1";
       const DEFAULT_DIFFICULTY_KEY = "typequest-default-difficulty-v1";
+      const DEFAULT_RUN_LENGTH_KEY = "typequest-default-run-length-v1";
       const DEFAULT_TYPING_MODE_KEY = "typequest-default-typing-mode-v1";
       const ONBOARDING_SEEN_KEY = "typequest-onboarding-seen-v1";
       const DAILY_HISTORY_KEY = "typequest-daily-history-v1";
@@ -1977,6 +2021,7 @@
       const RECENT_RUN_LIMIT = 10;
       const KEYPRESS_SOUND_THEMES = ["mechanical", "soft", "none"];
       const DIFFICULTIES = ["easy", "normal", "hard"];
+      const RUN_LENGTHS = [30, 60, 120];
       const TYPING_MODE_KEYS = ["beginner", "advanced", "expert"];
       const PERSONAL_BEST_FIELDS = [
         { key: "netWpm", label: "Net WPM" },
@@ -1999,6 +2044,7 @@
       let soundMuted = readSoundMuted();
       let keypressSoundTheme = readKeypressSoundTheme();
       let defaultDifficulty = readDefaultDifficulty();
+      let defaultRunLength = readDefaultRunLength();
       let defaultTypingMode = readDefaultTypingMode();
       let settingsReturnFocus = null;
       let settingsResetConfirm = "";
@@ -2011,6 +2057,7 @@
           mode: "menu",
           runMode: "endless",
           difficulty: defaultDifficulty,
+          runLength: defaultRunLength,
           typingMode: defaultTypingMode,
           drillTarget: "",
           seed: 0,
@@ -2118,10 +2165,15 @@
         return true;
       }
 
-      function personalBestForDifficulty(difficulty) {
+      function personalBestKey(difficulty, runLength = state.runLength) {
+        return `${difficulty}-${normalizeRunLength(runLength)}`;
+      }
+
+      function personalBestForDifficulty(difficulty, runLength = state.runLength) {
+        const bests = readPersonalBests();
         return {
           ...emptyPersonalBest(),
-          ...(readPersonalBests()[difficulty] || {})
+          ...(bests[personalBestKey(difficulty, runLength)] || {})
         };
       }
 
@@ -2136,7 +2188,7 @@
 
       function updatePersonalBestsDisplay() {
         const best = personalBestForDifficulty(state.difficulty);
-        els.personalBestsTitle.textContent = `${difficultyLabel(state.difficulty)} Personal Bests`;
+        els.personalBestsTitle.textContent = `${difficultyLabel(state.difficulty)} ${state.runLength}s Personal Bests`;
         els.bestNetWpm.textContent = formatBestValue("netWpm", best.netWpm);
         els.bestRawWpm.textContent = formatBestValue("rawWpm", best.rawWpm);
         els.bestAccuracy.textContent = formatBestValue("accuracy", best.accuracy);
@@ -2144,9 +2196,10 @@
         els.bestScore.textContent = formatBestValue("score", best.score);
       }
 
-      function recordPersonalBests(difficulty, result) {
+      function recordPersonalBests(difficulty, result, runLength = state.runLength) {
         const bests = readPersonalBests();
-        const previous = { ...emptyPersonalBest(), ...(bests[difficulty] || {}) };
+        const key = personalBestKey(difficulty, runLength);
+        const previous = { ...emptyPersonalBest(), ...(bests[key] || {}) };
         const next = { ...previous };
         const improved = [];
 
@@ -2158,15 +2211,15 @@
         });
 
         if (improved.length) {
-          bests[difficulty] = next;
+          bests[key] = next;
           writePersonalBests(bests);
         }
 
         return improved;
       }
 
-      function hasExistingPersonalBest(difficulty) {
-        const best = personalBestForDifficulty(difficulty);
+      function hasExistingPersonalBest(difficulty, runLength = state.runLength) {
+        const best = personalBestForDifficulty(difficulty, runLength);
         return PERSONAL_BEST_FIELDS.some(field => best[field.key] > 0);
       }
 
@@ -2290,10 +2343,11 @@
         const date = typeof run.date === "string" ? run.date : "";
         const mode = typeof run.mode === "string" && runModes[run.mode] ? run.mode : "endless";
         const difficulty = DIFFICULTIES.includes(run.difficulty) ? run.difficulty : "easy";
+        const runLength = normalizeRunLength(run.runLength);
         const netWpm = Number.isFinite(run.netWpm) ? Math.max(0, Math.round(run.netWpm)) : 0;
         const accuracy = Number.isFinite(run.accuracy) ? Math.max(0, Math.min(100, Math.round(run.accuracy))) : 0;
         const streak = Number.isFinite(run.streak) ? Math.max(0, Math.round(run.streak)) : 0;
-        return { date, mode, difficulty, netWpm, accuracy, streak };
+        return { date, mode, difficulty, runLength, netWpm, accuracy, streak };
       }
 
       function readRecentRuns() {
@@ -2324,6 +2378,7 @@
           date: new Date().toISOString(),
           mode: state.runMode,
           difficulty: state.difficulty,
+          runLength: state.runLength,
           ...result
         });
         if (!run) return [];
@@ -2399,7 +2454,7 @@
         els.recentRunList.innerHTML = runs.map(run => `
           <li class="recent-run">
             <span class="recent-run-date">${escapeHtml(formatRunDate(run.date))}</span>
-            <span class="recent-run-mode">${escapeHtml(runModes[run.mode].label)} / ${escapeHtml(difficultyLabel(run.difficulty))}</span>
+            <span class="recent-run-mode">${escapeHtml(runModes[run.mode].label)} / ${escapeHtml(difficultyLabel(run.difficulty))} / ${run.runLength}s</span>
             <span class="recent-run-metric">${run.netWpm} WPM</span>
             <span class="recent-run-metric">${run.accuracy}%</span>
             <span class="recent-run-metric">${run.streak} streak</span>
@@ -2413,7 +2468,7 @@
         els.dailyPanel.hidden = !isDaily;
         const history = readDailyHistory();
         const today = dailyDateStamp();
-        const todayResult = history.results[today];
+        const todayResult = history.results[dailyResultKey(today)];
         const streak = activeDailyStreak(history);
         els.dailyStreak.textContent = streak;
         if (todayResult) {
@@ -2424,7 +2479,7 @@
           els.dailyShareButton.hidden = false;
           els.dailyShareButton.dataset.shareString = dailyShareString(todayResult);
         } else {
-          els.dailyStatus.textContent = `Today's daily seed (${today}) is ready. Same words for every player today.`;
+          els.dailyStatus.textContent = `Today's ${state.runLength}s daily seed (${today}) is ready. Same words for every player today.`;
           els.dailyTodayScore.textContent = "-";
           els.dailyTodayNetWpm.textContent = "-";
           els.dailyTodayAccuracy.textContent = "-";
@@ -2568,9 +2623,10 @@
       function recordDailyResult(result) {
         const history = readDailyHistory();
         const today = dailyDateStamp();
-        const existing = history.results[today];
+        const key = dailyResultKey(today, result.difficulty, result.runLength);
+        const existing = history.results[key];
         if (!existing || result.netWpm > (existing.netWpm || 0)) {
-          history.results[today] = { ...result, date: today };
+          history.results[key] = { ...result, date: today };
         }
         if (history.lastPlayedDate !== today) {
           history.streak = history.lastPlayedDate === priorDailyDateStamp(today)
@@ -2589,8 +2645,12 @@
         return 0;
       }
 
+      function dailyResultKey(date, difficulty = state.difficulty, runLength = state.runLength) {
+        return `${date}-${difficulty}-${normalizeRunLength(runLength)}`;
+      }
+
       function dailyShareString(result) {
-        return `TypeQuest Daily ${result.date} (${difficultyLabel(result.difficulty)}) · ${result.netWpm} NetWPM · ${result.accuracy}%`;
+        return `TypeQuest Daily ${result.date} (${difficultyLabel(result.difficulty)}, ${normalizeRunLength(result.runLength)}s) · ${result.netWpm} NetWPM · ${result.accuracy}%`;
       }
 
       function readSoundMuted() {
@@ -2640,6 +2700,32 @@
       function writeDefaultDifficulty(difficulty) {
         try {
           window.localStorage.setItem(DEFAULT_DIFFICULTY_KEY, difficulty);
+        } catch (error) {
+          return false;
+        }
+        return true;
+      }
+
+      function normalizeRunLength(value) {
+        const seconds = Number(value);
+        return RUN_LENGTHS.includes(seconds) ? seconds : 60;
+      }
+
+      function selectedRunDuration() {
+        return runModes[state.runMode].timed ? state.runLength : Infinity;
+      }
+
+      function readDefaultRunLength() {
+        try {
+          return normalizeRunLength(window.localStorage.getItem(DEFAULT_RUN_LENGTH_KEY));
+        } catch (error) {
+          return 60;
+        }
+      }
+
+      function writeDefaultRunLength(seconds) {
+        try {
+          window.localStorage.setItem(DEFAULT_RUN_LENGTH_KEY, String(seconds));
         } catch (error) {
           return false;
         }
@@ -2815,6 +2901,14 @@
         });
       }
 
+      function updateRunLengthButtons() {
+        document.querySelectorAll("[data-run-length]").forEach(button => {
+          const isActive = normalizeRunLength(button.dataset.runLength) === state.runLength;
+          button.classList.toggle("active", isActive);
+          button.setAttribute("aria-pressed", String(isActive));
+        });
+      }
+
       function updateTypingModeButtons() {
         document.querySelectorAll("[data-typing-mode]").forEach(button => {
           button.classList.toggle("active", button.dataset.typingMode === state.typingMode);
@@ -2824,6 +2918,11 @@
       function updateSettingsDefaultButtons() {
         document.querySelectorAll("[data-default-difficulty]").forEach(button => {
           const isActive = button.dataset.defaultDifficulty === defaultDifficulty;
+          button.classList.toggle("active", isActive);
+          button.setAttribute("aria-pressed", String(isActive));
+        });
+        document.querySelectorAll("[data-default-run-length]").forEach(button => {
+          const isActive = normalizeRunLength(button.dataset.defaultRunLength) === defaultRunLength;
           button.classList.toggle("active", isActive);
           button.setAttribute("aria-pressed", String(isActive));
         });
@@ -2837,9 +2936,20 @@
       function setDifficulty(difficulty) {
         if (!DIFFICULTIES.includes(difficulty)) return;
         state.difficulty = difficulty;
-        state.timeLeft = runModes[state.runMode].timed ? palettes[state.difficulty].time : Infinity;
+        state.timeLeft = selectedRunDuration();
         updateDifficultyButtons();
         updatePersonalBestsDisplay();
+        updateHud();
+      }
+
+      function setRunLength(seconds) {
+        state.runLength = normalizeRunLength(seconds);
+        if (state.mode === "menu" || state.mode === "over") {
+          state.timeLeft = selectedRunDuration();
+        }
+        updateRunLengthButtons();
+        updatePersonalBestsDisplay();
+        updateDailyDisplay();
         updateHud();
       }
 
@@ -2856,6 +2966,13 @@
         writeDefaultDifficulty(defaultDifficulty);
         updateSettingsDefaultButtons();
         if (state.mode === "menu" || state.mode === "over") setDifficulty(defaultDifficulty);
+      }
+
+      function setDefaultRunLength(seconds) {
+        defaultRunLength = normalizeRunLength(seconds);
+        writeDefaultRunLength(defaultRunLength);
+        updateSettingsDefaultButtons();
+        if (state.mode === "menu" || state.mode === "over") setRunLength(defaultRunLength);
       }
 
       function setDefaultTypingMode(mode) {
@@ -3194,17 +3311,19 @@
         audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
         const selectedDifficulty = state.difficulty;
         const selectedRunMode = state.runMode;
+        const selectedRunLength = state.runLength;
         const selectedTypingMode = state.typingMode;
         const selectedDrillTarget = state.drillTarget;
         state = makeState();
         state.difficulty = selectedDifficulty;
         state.runMode = selectedRunMode;
+        state.runLength = selectedRunLength;
         state.typingMode = selectedTypingMode;
         state.drillTarget = selectedDrillTarget;
         state.seed = runModes[state.runMode].daily ? dailySeed() : Math.floor(Math.random() * 0xffffffff);
         state.rngState = state.seed;
         state.mode = "playing";
-        state.timeLeft = runModes[state.runMode].timed ? palettes[state.difficulty].time : Infinity;
+        state.timeLeft = selectedRunDuration();
         state.countdown = COUNTDOWN_SECONDS;
         els.startScreen.hidden = true;
         els.onboardingScreen.hidden = true;
@@ -3239,14 +3358,16 @@
         if (state.mode !== "paused") return;
         const selectedDifficulty = state.difficulty;
         const selectedRunMode = state.runMode;
+        const selectedRunLength = state.runLength;
         const selectedTypingMode = state.typingMode;
         const selectedDrillTarget = state.drillTarget;
         state = makeState();
         state.difficulty = selectedDifficulty;
         state.runMode = selectedRunMode;
+        state.runLength = selectedRunLength;
         state.typingMode = selectedTypingMode;
         state.drillTarget = selectedDrillTarget;
-        state.timeLeft = runModes[state.runMode].timed ? palettes[state.difficulty].time : Infinity;
+        state.timeLeft = selectedRunDuration();
         els.pauseScreen.hidden = true;
         els.gameOverScreen.hidden = true;
         els.startScreen.hidden = false;
@@ -3360,7 +3481,8 @@
             accuracy: finalAccuracy,
             score: state.score,
             streak: state.bestStreak,
-            difficulty: state.difficulty
+            difficulty: state.difficulty,
+            runLength: state.runLength
           });
           unlockAchievementIf(activeDailyStreak(readDailyHistory()) >= 7, "first-daily-7");
           updateDailyDisplay();
@@ -4554,13 +4676,17 @@
           document.querySelectorAll("[data-run-mode]").forEach(b => b.classList.remove("active"));
           button.classList.add("active");
           state.runMode = button.dataset.runMode;
-          state.timeLeft = runModes[state.runMode].timed ? palettes[state.difficulty].time : Infinity;
+          state.timeLeft = selectedRunDuration();
           updateHud();
           updateDailyDisplay();
         });
       });
 
       els.dailyShareButton.addEventListener("click", copyDailyShareString);
+
+      document.querySelectorAll("[data-run-length]").forEach(button => {
+        button.addEventListener("click", () => setRunLength(button.dataset.runLength));
+      });
 
       document.querySelectorAll("[data-typing-mode]").forEach(button => {
         button.addEventListener("click", () => setTypingMode(button.dataset.typingMode));
@@ -4598,6 +4724,9 @@
       document.querySelectorAll("[data-default-difficulty]").forEach(button => {
         button.addEventListener("click", () => setDefaultDifficulty(button.dataset.defaultDifficulty));
       });
+      document.querySelectorAll("[data-default-run-length]").forEach(button => {
+        button.addEventListener("click", () => setDefaultRunLength(button.dataset.defaultRunLength));
+      });
       document.querySelectorAll("[data-default-typing-mode]").forEach(button => {
         button.addEventListener("click", () => setDefaultTypingMode(button.dataset.defaultTypingMode));
       });
@@ -4612,6 +4741,7 @@
       updateMuteButtons();
       updateKeypressSoundThemeButtons();
       updateDifficultyButtons();
+      updateRunLengthButtons();
       updateTypingModeButtons();
       updateSettingsDefaultButtons();
       updateHud();

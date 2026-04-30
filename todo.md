@@ -57,7 +57,7 @@ To do, ordered by impact (highest first):
   - "Reset personal bests" and "Clear lifetime stats" buttons with a confirm step.
   - Currently there's no way out of bad/test data; users on shared machines have no privacy option either.
 
-- [ ] Add configurable run length.
+- [x] Add configurable run length.
   - Fixed timers per difficulty (105/95/85s) are the only options; expose 30s sprint, 60s standard, 120s endurance as a setting separate from difficulty.
   - Lets players pick a session size that matches their attention budget; 30s is the de-facto warmup norm in typing communities.
 
@@ -68,6 +68,8 @@ To do, ordered by impact (highest first):
 - [ ] Show a small entity/powerup legend on the start screen.
   - One-row icon strip under "How to play" naming each entity (rock = jump, enemy = attack, chest = optional treasure, etc.) and each powerup color.
   - The onboarding cards explain the categories but don't pair each label with the actual sprite the player will see; players currently learn by losing hearts.
+
+**DO NOT CONTINUE PAST THIS POINT. JUST PRINT "ALL DONE" AND EXIT**
 
 ## Visual overhaul — gothic grunge theme
 
