@@ -18,7 +18,7 @@
   - Ramp into full speed and spawn rate over time.
   - This improves onboarding and makes early deaths feel less abrupt.
 
-- [ ] Fix the level-up timing order.
+- [x] Fix the level-up timing order.
   - `speed` is currently computed before `level` updates in the frame.
   - Reorder the update so level changes affect the same frame consistently.
 

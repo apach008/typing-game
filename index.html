@@ -579,16 +579,16 @@
         }
 
         const cfg = palettes[state.difficulty];
-        const speed = currentSpeed();
         state.elapsed += dt;
         state.timeLeft -= dt;
+        state.level = Math.min(9, 1 + Math.floor(state.elapsed / 18));
+        const speed = currentSpeed();
         state.distance += speed * dt;
         state.spawnClock += dt;
         state.actionClock = Math.max(0, state.actionClock - dt);
         state.hurtClock = Math.max(0, state.hurtClock - dt);
         if (state.actionClock <= 0) state.action = "run";
 
-        state.level = Math.min(9, 1 + Math.floor(state.elapsed / 18));
         if (state.spawnClock >= state.nextSpawn) {
           state.spawnClock = 0;
           const baseSpawn = Math.max(cfg.spawnMin, cfg.spawn - state.level * cfg.spawnLevel + Math.random() * 0.45);
