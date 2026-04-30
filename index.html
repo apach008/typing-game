@@ -725,6 +725,7 @@
           ground: "#22252b",
           groundTrim: "#384044",
           shadow: "#15191d",
+          atmosphere: { type: "fireflies", tint: "rgba(255, 226, 139, 0.13)" },
           hazards: { obstacle: 1.25, bridge: 0.75, flying: 0.85 }
         },
         {
@@ -739,6 +740,7 @@
           ground: "#2b2b2b",
           groundTrim: "#56534a",
           shadow: "#18191b",
+          atmosphere: { type: "rain", tint: "rgba(113, 132, 150, 0.16)" },
           hazards: { shielded: 1.55, bridge: 1.25, chest: 1.15 }
         },
         {
@@ -753,6 +755,7 @@
           ground: "#2b1c1c",
           groundTrim: "#c7572f",
           shadow: "#110909",
+          atmosphere: { type: "embers", tint: "rgba(255, 106, 61, 0.12)" },
           hazards: { obstacle: 1.35, enemy: 1.2, powerup: 0.85 },
           spawnScale: 0.96
         },
@@ -768,6 +771,7 @@
           ground: "#253142",
           groundTrim: "#92a6b8",
           shadow: "#141a24",
+          atmosphere: { type: "daynight", tint: "rgba(17, 24, 42, 0.18)" },
           hazards: { flying: 1.8, bridge: 1.45, obstacle: 0.75 }
         },
         {
@@ -782,6 +786,7 @@
           ground: "#232530",
           groundTrim: "#555c73",
           shadow: "#11131a",
+          atmosphere: { type: "daynight", tint: "rgba(10, 13, 24, 0.22)" },
           hazards: { enemy: 1.3, shielded: 1.45, flying: 1.15, chest: 0.75 },
           spawnScale: 0.98
         }
@@ -1741,6 +1746,81 @@
         pixelRect(x + 26, 438, 34, 6, dark);
       }
 
+      function waveUnit(value) {
+        return (Math.sin(value) + 1) / 2;
+      }
+
+      function drawDayNightOverlay(t, theme) {
+        const cycle = waveUnit(t * 0.08 + state.themeIndex * 0.9);
+        const alpha = 0.08 + cycle * 0.2;
+        ctx.fillStyle = theme.atmosphere.tint;
+        ctx.globalAlpha = alpha;
+        ctx.fillRect(0, 0, canvas.width, 444);
+        ctx.globalAlpha = 1;
+
+        const moonY = 54 + cycle * 42;
+        ctx.fillStyle = "rgba(230, 240, 255, 0.58)";
+        pixelRect(830, moonY, 26, 26, ctx.fillStyle);
+        ctx.fillStyle = "rgba(32, 41, 66, 0.72)";
+        pixelRect(840, moonY - 2, 18, 28, ctx.fillStyle);
+
+        for (let i = 0; i < 20; i++) {
+          const x = (i * 47 + Math.floor(t * 3)) % canvas.width;
+          const y = 34 + ((i * 31) % 176);
+          const twinkle = 0.18 + waveUnit(t * 2.4 + i) * 0.42;
+          ctx.fillStyle = `rgba(245, 238, 190, ${twinkle * cycle})`;
+          pixelRect(x, y, 2, 2, ctx.fillStyle);
+        }
+      }
+
+      function drawRain(t) {
+        ctx.strokeStyle = "rgba(166, 189, 204, 0.42)";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        for (let i = 0; i < 54; i++) {
+          const x = (i * 37 + t * 220 - state.distance * 0.18) % (canvas.width + 80) - 40;
+          const y = (i * 71 + t * 360) % 450;
+          ctx.moveTo(x, y);
+          ctx.lineTo(x - 10, y + 26);
+        }
+        ctx.stroke();
+      }
+
+      function drawEmbers(t) {
+        for (let i = 0; i < 28; i++) {
+          const drift = waveUnit(t * 1.2 + i * 2.1) * 18;
+          const x = (i * 61 - state.distance * 0.24 + drift) % (canvas.width + 60) - 30;
+          const y = 426 - ((i * 43 + t * 58) % 330);
+          const alpha = 0.24 + waveUnit(t * 4 + i) * 0.46;
+          ctx.fillStyle = `rgba(255, ${118 + (i % 4) * 22}, 61, ${alpha})`;
+          pixelRect(x, y, 4, 4, ctx.fillStyle);
+        }
+      }
+
+      function drawFireflies(t) {
+        for (let i = 0; i < 24; i++) {
+          const x = (i * 53 + Math.sin(t * 0.7 + i) * 36 - state.distance * 0.12) % (canvas.width + 50) - 25;
+          const y = 245 + (i * 29) % 164 + Math.sin(t * 1.1 + i * 0.7) * 12;
+          const glow = 0.25 + waveUnit(t * 3.2 + i * 1.4) * 0.55;
+          ctx.fillStyle = `rgba(255, 226, 139, ${glow * 0.28})`;
+          pixelRect(x - 4, y - 4, 10, 10, ctx.fillStyle);
+          ctx.fillStyle = `rgba(255, 245, 164, ${glow})`;
+          pixelRect(x, y, 3, 3, ctx.fillStyle);
+        }
+      }
+
+      function drawAtmosphere(t, theme) {
+        if (!theme.atmosphere) return;
+        ctx.save();
+        ctx.fillStyle = theme.atmosphere.tint;
+        ctx.fillRect(0, 0, canvas.width, 444);
+        if (theme.atmosphere.type === "rain") drawRain(t);
+        if (theme.atmosphere.type === "embers") drawEmbers(t);
+        if (theme.atmosphere.type === "fireflies") drawFireflies(t);
+        if (theme.atmosphere.type === "daynight") drawDayNightOverlay(t, theme);
+        ctx.restore();
+      }
+
       function drawBackground(t) {
         const theme = currentTheme();
         const sky = ctx.createLinearGradient(0, 0, 0, canvas.height);
@@ -1795,6 +1875,7 @@
         for (let i = 0; i < 18; i++) {
           drawForegroundGrass(parallaxX(i, 64, 1.22, 12), theme);
         }
+        drawAtmosphere(t, theme);
       }
 
       function drawHero(t) {

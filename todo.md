@@ -138,7 +138,7 @@
   - Brief slowdown when a boss appears.
   - Subtle impact zoom on attacks.
 
-- [ ] Add day-night or weather variation.
+- [x] Add day-night or weather variation.
   - Rain in ruins, embers in lava cave, fireflies in forest.
   - Keep effects lightweight so performance stays stable.
 
