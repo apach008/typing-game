@@ -95,7 +95,7 @@
   - Net WPM: correct completed words minus typo penalty.
   - Final stats should show both for typing-practice value.
 
-- [ ] Add per-run typing breakdown.
+- [x] Add per-run typing breakdown.
   - Total keystrokes.
   - Correct keystrokes.
   - Mistyped letters.

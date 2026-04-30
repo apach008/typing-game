@@ -323,7 +323,12 @@
             <div class="final-stat"><span>Raw WPM</span><strong id="finalRawWpm">0</strong></div>
             <div class="final-stat"><span>Net WPM</span><strong id="finalNetWpm">0</strong></div>
             <div class="final-stat"><span>Accuracy</span><strong id="finalAccuracy">100%</strong></div>
-            <div class="final-stat"><span>Best Streak</span><strong id="finalStreak">0</strong></div>
+            <div class="final-stat"><span>Streak</span><strong id="finalStreak">0</strong></div>
+            <div class="final-stat"><span>Total Keys</span><strong id="finalTotalKeys">0</strong></div>
+            <div class="final-stat"><span>Correct Keys</span><strong id="finalCorrectKeys">0</strong></div>
+            <div class="final-stat"><span>Mistyped</span><strong id="finalMistypedKeys">0</strong></div>
+            <div class="final-stat"><span>Longest Streak</span><strong id="finalLongestStreak">0</strong></div>
+            <div class="final-stat"><span>Avg Reaction</span><strong id="finalReactionTime">0.00s</strong></div>
           </div>
           <button class="primary" id="againButton">Run Again</button>
         </div>
@@ -352,6 +357,11 @@
         finalNetWpm: document.getElementById("finalNetWpm"),
         finalAccuracy: document.getElementById("finalAccuracy"),
         finalStreak: document.getElementById("finalStreak"),
+        finalTotalKeys: document.getElementById("finalTotalKeys"),
+        finalCorrectKeys: document.getElementById("finalCorrectKeys"),
+        finalMistypedKeys: document.getElementById("finalMistypedKeys"),
+        finalLongestStreak: document.getElementById("finalLongestStreak"),
+        finalReactionTime: document.getElementById("finalReactionTime"),
         gameOverText: document.getElementById("gameOverText")
       };
 
@@ -543,12 +553,17 @@
           distance: 0,
           spawnClock: 0,
           nextSpawn: 1.4,
+          nextEntityId: 1,
           entities: [],
           typed: "",
           typoLock: 0,
           expectedFlash: 0,
           totalTyped: 0,
           correctTyped: 0,
+          reactionTargetKey: "",
+          reactionStartedAt: 0,
+          reactionTotal: 0,
+          reactionCount: 0,
           adaptiveTyped: 0,
           adaptiveCorrect: 0,
           adaptiveCompleted: 0,
@@ -722,6 +737,7 @@
         const powerup = kind.type === "powerup" ? powerupTypes[Math.floor(random() * powerupTypes.length)] : null;
         const word = words[0];
         state.entities.push({
+          id: state.nextEntityId++,
           x: nextSpawnX(words.join(""), forceX, kind.timingScale),
           y: kind.y,
           w: kind.w,
@@ -743,6 +759,7 @@
         const wordCount = BOSS_WORDS_PER_LEVEL + Math.floor(level / BOSS_LEVEL_INTERVAL);
         const words = Array.from({ length: wordCount }, () => pickWord("boss"));
         const boss = {
+          id: state.nextEntityId++,
           x: 680,
           y: 392,
           w: 122,
@@ -766,6 +783,7 @@
         state.boss = boss;
         state.spawnClock = 0;
         state.typed = "";
+        state.reactionTargetKey = "";
         clearTypoRecovery();
         triggerComboBurst(`Level ${level} boss`, 1.4);
         beep("level");
@@ -859,7 +877,12 @@
         els.finalRawWpm.textContent = currentRawWpm();
         els.finalNetWpm.textContent = currentNetWpm();
         els.finalAccuracy.textContent = `${currentAccuracy()}%`;
-        els.finalStreak.textContent = state.bestStreak;
+        els.finalStreak.textContent = state.streak;
+        els.finalTotalKeys.textContent = state.totalTyped;
+        els.finalCorrectKeys.textContent = state.correctTyped;
+        els.finalMistypedKeys.textContent = currentMistypedKeys();
+        els.finalLongestStreak.textContent = state.bestStreak;
+        els.finalReactionTime.textContent = `${currentAverageReactionTime()}s`;
         els.gameOverScreen.hidden = false;
         beep(won ? "level" : "hit");
       }
@@ -899,7 +922,29 @@
         return state.entities.filter(e => !e.done).sort((a, b) => a.x - b.x)[0];
       }
 
+      function syncReactionTarget(target) {
+        if (!target) {
+          state.reactionTargetKey = "";
+          state.reactionStartedAt = state.elapsed;
+          return;
+        }
+        const targetKey = `${target.id}:${target.wordIndex}`;
+        if (state.reactionTargetKey !== targetKey) {
+          state.reactionTargetKey = targetKey;
+          state.reactionStartedAt = state.elapsed;
+        }
+      }
+
+      function recordReactionTime(target) {
+        if (!target) return;
+        syncReactionTarget(target);
+        state.reactionTotal += Math.max(0, state.elapsed - state.reactionStartedAt);
+        state.reactionCount += 1;
+      }
+
       function completeTarget(target) {
+        recordReactionTime(target);
+
         if (target.wordIndex < target.words.length - 1) {
           target.wordIndex += 1;
           target.word = target.words[target.wordIndex];
@@ -908,6 +953,7 @@
           clearTypoRecovery();
           state.action = "attack";
           state.actionClock = 0.28;
+          syncReactionTarget(target);
           if (target.type === "boss") {
             target.attackClock = Math.min(target.attackDuration, target.attackClock + 1.2);
           }
@@ -917,6 +963,7 @@
 
         target.done = true;
         target.pop = 0.35;
+        state.reactionTargetKey = "";
         state.completedChars += target.word.length;
         state.streak += 1;
         state.bestStreak = Math.max(state.bestStreak, state.streak);
@@ -1045,6 +1092,7 @@
         }
         const target = currentTarget();
         if (event.key.length !== 1) return;
+        syncReactionTarget(target);
 
         const key = event.key;
         state.totalTyped += 1;
@@ -1082,6 +1130,15 @@
         return Math.max(0, Math.round((state.correctTyped / state.totalTyped) * 100));
       }
 
+      function currentMistypedKeys() {
+        return Math.max(0, state.totalTyped - state.correctTyped);
+      }
+
+      function currentAverageReactionTime() {
+        if (!state.reactionCount) return "0.00";
+        return (state.reactionTotal / state.reactionCount).toFixed(2);
+      }
+
       function updateHud() {
         els.wpm.textContent = currentNetWpm();
         els.accuracy.textContent = `${currentAccuracy()}%`;
@@ -1098,6 +1155,7 @@
         }
 
         const target = currentTarget();
+        syncReactionTarget(target);
         if (!target) {
           els.typebar.innerHTML = "<span>Keep running...</span>";
           return;
