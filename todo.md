@@ -49,7 +49,7 @@ To do, ordered by impact (highest first):
   - Normal: balanced runner pacing.
   - Hard: longer/rarer words, dense threats, strict pacing.
 
-- [ ] Refocus sound effects on typing-loop events.
+- [x] Refocus sound effects on typing-loop events.
   - Keep: keypress tick, word complete, typo error.
   - Drop the sword / jump / damage / level-up / game-over flavor sounds — those serve the action skin, not the typing practice.
 

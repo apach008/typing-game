@@ -1970,9 +1970,7 @@
         const settings = {
           key: keySettings[keypressSoundTheme] || keySettings.mechanical,
           complete: [880, 0.09, "triangle", 0.06],
-          hit: [130, 0.18, "sawtooth", 0.07],
-          start: [440, 0.12, "triangle", 0.05],
-          level: [990, 0.16, "square", 0.045]
+          error: [150, 0.08, "sawtooth", 0.055]
         }[type] || [330, 0.08, "square", 0.04];
         osc.frequency.setValueAtTime(settings[0], now);
         osc.type = settings[2];
@@ -2157,7 +2155,6 @@
         clearTypoRecovery();
         triggerBossCamera();
         triggerComboBurst(`Level ${level} boss`, 1.4);
-        beep("level");
       }
 
       function applyPowerup(powerup) {
@@ -2176,7 +2173,6 @@
           state.powerups.message = "Magnet";
         }
         state.powerups.messageClock = 1.2;
-        beep("level");
       }
 
       function comboMultiplier() {
@@ -2238,7 +2234,6 @@
         }
 
         triggerComboBurst(label, playedLevelCue ? 1.15 : 0.85);
-        if (playedLevelCue) beep("level");
         return playedLevelCue;
       }
 
@@ -2265,7 +2260,6 @@
         els.pauseScreen.hidden = true;
         spawnEntity(660);
         spawnEntity(930);
-        beep("start");
         updateHud();
       }
 
@@ -2319,7 +2313,6 @@
         updateLifetimeStatsDisplay();
         els.pauseScreen.hidden = true;
         els.gameOverScreen.hidden = false;
-        beep(won ? "level" : "hit");
       }
 
       function random() {
@@ -2412,6 +2405,7 @@
         clearTypoRecovery();
         state.action = target.category === "enemy" || target.type === "flying" || target.type === "shielded" ? "attack" : "jump";
         state.actionClock = 0.45;
+        beep("complete");
         if (state.action === "attack") {
           addSlashEffect(target);
           triggerImpactCamera(target.type === "boss" ? 0.28 : 0.18);
@@ -2428,21 +2422,17 @@
             return;
           }
           triggerComboBurst(`Boss defeated +${BOSS_TIME_BONUS}s`, 1.4);
-          beep("level");
         }
         if (target.type === "powerup") {
           applyPowerup(target.powerup);
           state.action = "jump";
         }
-        const playedComboCue = applyComboMilestones();
+        applyComboMilestones();
         const completedLength = target.words.reduce((sum, word) => sum + word.length, 0);
         const baseScore = completedLength * 10 + state.streak * 5 + state.level * 8;
         const magnetBonus = state.powerups.magnet > 0 ? 1.5 : 1;
         state.score += Math.round(baseScore * target.scoreScale * magnetBonus * comboMultiplier());
         if (state.powerups.magnet > 0 && target.type !== "powerup") state.powerups.magnet -= 1;
-        if (!playedComboCue && target.type !== "powerup") {
-          beep("complete");
-        }
       }
 
       function clearTypoRecovery() {
@@ -2488,7 +2478,7 @@
           state.hurtClock = 0.2;
           state.typoLock = TYPO_LOCK_SECONDS;
           state.expectedFlash = expectedLetter(target) ? TYPO_FLASH_SECONDS : 0;
-          beep("level");
+          beep("error");
           return;
         }
         state.streak = 0;
@@ -2500,7 +2490,7 @@
         els.typebar.classList.remove("wrong");
         void els.typebar.offsetWidth;
         els.typebar.classList.add("wrong");
-        beep("hit");
+        beep("error");
       }
 
       function missTarget(target) {
@@ -2527,8 +2517,6 @@
 
         if (state.hearts <= 0) {
           endGame(`No hearts left. The word "${target.word}" reached the hero.`);
-        } else {
-          beep("hit");
         }
       }
 
