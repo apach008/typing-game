@@ -44,7 +44,7 @@
   - Crumbling bridges that use longer timing windows.
   - Treasure chests that are optional but boost score.
 
-- [ ] Add powerups.
+- [x] Add powerups.
   - Time boost: adds 5-10 seconds.
   - Focus: slows the world briefly.
   - Combo shield: preserves streak after one typo.

@@ -50,7 +50,7 @@
 
     .hud {
       display: grid;
-      grid-template-columns: repeat(7, minmax(76px, 1fr));
+      grid-template-columns: repeat(8, minmax(76px, 1fr));
       gap: 1px;
       background: #26304f;
       border-bottom: 1px solid #3d496d;
@@ -266,6 +266,7 @@
       <div class="stat"><span>Score</span><strong id="score">0</strong></div>
       <div class="stat"><span>Level</span><strong id="level">1</strong></div>
       <div class="stat"><span>Hearts</span><strong id="hearts">3</strong></div>
+      <div class="stat"><span>Power</span><strong id="powerup">-</strong></div>
     </section>
 
     <section class="stage">
@@ -313,6 +314,7 @@
         score: document.getElementById("score"),
         level: document.getElementById("level"),
         hearts: document.getElementById("hearts"),
+        powerup: document.getElementById("powerup"),
         typebar: document.getElementById("typebar"),
         startScreen: document.getElementById("startScreen"),
         gameOverScreen: document.getElementById("gameOverScreen"),
@@ -341,6 +343,10 @@
         treasure: [
           "gem", "coin", "gold", "loot", "bonus", "haste", "boost", "prize", "reward", "cache",
           "silver", "bounty", "fortune", "treasure", "glimmer", "jackpot", "windfall", "riches"
+        ],
+        powerup: [
+          "chrono", "focus", "shield", "magnet", "aegis", "tempo", "spark", "charge",
+          "second", "clarity", "guard", "attract", "safety", "boost"
         ]
       };
 
@@ -350,8 +356,16 @@
         flying: { type: "flying", category: "enemy", weight: 12, y: 292, w: 48, h: 34, timingScale: 1.12, scoreScale: 1.15 },
         shielded: { type: "shielded", category: "enemy", weight: 10, y: 390, w: 52, h: 50, timingScale: 1.35, scoreScale: 1.35, wordCount: 2 },
         bridge: { type: "bridge", category: "obstacle", weight: 8, y: 428, w: 86, h: 24, timingScale: 1.55, scoreScale: 1.15 },
-        chest: { type: "chest", category: "treasure", weight: 6, y: 412, w: 46, h: 34, timingScale: 1.1, scoreScale: 1.65, optional: true }
+        chest: { type: "chest", category: "treasure", weight: 6, y: 412, w: 46, h: 34, timingScale: 1.1, scoreScale: 1.65, optional: true },
+        powerup: { type: "powerup", category: "powerup", weight: 7, y: 380, w: 34, h: 34, timingScale: 1.2, scoreScale: 1.1, optional: true }
       };
+
+      const powerupTypes = [
+        { id: "time", label: "Time", seconds: 8 },
+        { id: "focus", label: "Focus", duration: 6 },
+        { id: "shield", label: "Shield", charges: 1 },
+        { id: "magnet", label: "Magnet", charges: 5 }
+      ];
 
       const COUNTDOWN_SECONDS = 3;
       const STARTING_HEARTS = 3;
@@ -390,6 +404,13 @@
           bestStreak: 0,
           score: 0,
           hearts: STARTING_HEARTS,
+          powerups: {
+            focus: 0,
+            shield: 0,
+            magnet: 0,
+            message: "",
+            messageClock: 0
+          },
           level: 1,
           action: "run",
           actionClock: 0,
@@ -439,7 +460,8 @@
 
       function currentSpeed() {
         const cfg = palettes[state.difficulty];
-        return (cfg.speed + state.level * cfg.speedLevel) * warmupSpeedFactor();
+        const focusFactor = state.powerups.focus > 0 ? 0.62 : 1;
+        return (cfg.speed + state.level * cfg.speedLevel) * warmupSpeedFactor() * focusFactor;
       }
 
       function warmupProgress() {
@@ -473,6 +495,7 @@
         const kind = pickEntityKind();
         const category = kind.category || kind.type;
         const words = Array.from({ length: kind.wordCount || 1 }, () => pickWord(category));
+        const powerup = kind.type === "powerup" ? powerupTypes[Math.floor(Math.random() * powerupTypes.length)] : null;
         const word = words[0];
         state.entities.push({
           x: nextSpawnX(words.join(""), forceX, kind.timingScale),
@@ -485,10 +508,30 @@
           words,
           wordIndex: 0,
           optional: Boolean(kind.optional),
+          powerup,
           scoreScale: kind.scoreScale,
           done: false,
           pop: 0
         });
+      }
+
+      function applyPowerup(powerup) {
+        if (!powerup) return;
+        if (powerup.id === "time") {
+          state.timeLeft += powerup.seconds;
+          state.powerups.message = `+${powerup.seconds}s`;
+        } else if (powerup.id === "focus") {
+          state.powerups.focus = Math.max(state.powerups.focus, powerup.duration);
+          state.powerups.message = "Focus";
+        } else if (powerup.id === "shield") {
+          state.powerups.shield += powerup.charges;
+          state.powerups.message = "Shield";
+        } else if (powerup.id === "magnet") {
+          state.powerups.magnet = Math.max(state.powerups.magnet, powerup.charges);
+          state.powerups.message = "Magnet";
+        }
+        state.powerups.messageClock = 1.2;
+        beep("level");
       }
 
       function startGame() {
@@ -541,10 +584,17 @@
         state.bestStreak = Math.max(state.bestStreak, state.streak);
         const completedLength = target.words.reduce((sum, word) => sum + word.length, 0);
         const baseScore = completedLength * 10 + state.streak * 5 + state.level * 8;
-        state.score += Math.round(baseScore * target.scoreScale);
+        const magnetBonus = state.powerups.magnet > 0 ? 1.5 : 1;
+        state.score += Math.round(baseScore * target.scoreScale * magnetBonus);
+        if (state.powerups.magnet > 0 && target.type !== "powerup") state.powerups.magnet -= 1;
         state.typed = "";
         state.action = target.category === "enemy" || target.type === "flying" || target.type === "shielded" ? "attack" : "jump";
         state.actionClock = 0.45;
+        if (target.type === "powerup") {
+          applyPowerup(target.powerup);
+          state.action = "jump";
+          return;
+        }
         if (state.streak > 0 && state.streak % 10 === 0) {
           state.timeLeft += 5;
           beep("level");
@@ -554,6 +604,14 @@
       }
 
       function failKey() {
+        if (state.powerups.shield > 0) {
+          state.powerups.shield -= 1;
+          state.powerups.message = "Shield saved";
+          state.powerups.messageClock = 1;
+          state.hurtClock = 0.2;
+          beep("level");
+          return;
+        }
         state.streak = 0;
         state.score = Math.max(0, state.score - 15);
         state.hurtClock = 0.25;
@@ -629,6 +687,7 @@
         els.score.textContent = state.score;
         els.level.textContent = state.level;
         els.hearts.textContent = `${Math.max(0, state.hearts)}/${STARTING_HEARTS}`;
+        els.powerup.textContent = activePowerupLabel();
 
         if (state.mode === "playing" && state.countdown > 0) {
           els.typebar.textContent = `Get ready... ${Math.ceil(state.countdown)}`;
@@ -643,6 +702,14 @@
         const typed = target.word.slice(0, state.typed.length);
         const pending = target.word.slice(state.typed.length);
         els.typebar.innerHTML = `<span class="typed">${typed}</span><span class="pending">${pending}</span>`;
+      }
+
+      function activePowerupLabel() {
+        if (state.powerups.messageClock > 0) return state.powerups.message;
+        if (state.powerups.focus > 0) return `Focus ${Math.ceil(state.powerups.focus)}s`;
+        if (state.powerups.shield > 0) return `Shield x${state.powerups.shield}`;
+        if (state.powerups.magnet > 0) return `Magnet x${state.powerups.magnet}`;
+        return "-";
       }
 
       function update(dt) {
@@ -662,6 +729,8 @@
         state.spawnClock += dt;
         state.actionClock = Math.max(0, state.actionClock - dt);
         state.hurtClock = Math.max(0, state.hurtClock - dt);
+        state.powerups.focus = Math.max(0, state.powerups.focus - dt);
+        state.powerups.messageClock = Math.max(0, state.powerups.messageClock - dt);
         if (state.actionClock <= 0) state.action = "run";
 
         if (state.spawnClock >= state.nextSpawn) {
@@ -785,6 +854,17 @@
           pixelRect(entity.x + 4, entity.y - entity.h - 8, entity.w - 8, 14, "#d09a4c");
           pixelRect(entity.x + 3, entity.y - 22, entity.w - 6, 5, "#f5c452");
           pixelRect(entity.x + 19, entity.y - 25, 9, 13, "#ffe28b");
+        } else if (entity.type === "powerup") {
+          const color = {
+            time: "#67c7df",
+            focus: "#9ee37d",
+            shield: "#b9c8ff",
+            magnet: "#f5c452"
+          }[entity.powerup.id];
+          pixelRect(entity.x + 7, entity.y - entity.h - 10, 20, 10, color);
+          pixelRect(entity.x, entity.y - entity.h, entity.w, entity.h, "#24334f");
+          pixelRect(entity.x + 5, entity.y - entity.h + 5, entity.w - 10, entity.h - 10, color);
+          pixelRect(entity.x + 12, entity.y - entity.h + 12, 10, 10, "#fff8c9");
         } else {
           pixelRect(entity.x, entity.y - entity.h, entity.w, entity.h, "#6b6f7e");
           pixelRect(entity.x + 8, entity.y - entity.h - 16, 12, 18, "#969ba8");
@@ -798,13 +878,14 @@
         ctx.font = "bold 22px Trebuchet MS, sans-serif";
         ctx.textAlign = "center";
         const progress = entity.words.length > 1 ? `${entity.wordIndex + 1}/${entity.words.length} ` : "";
-        const label = `${progress}${entity.word}`;
+        const powerupLabel = entity.powerup ? `${entity.powerup.label}: ` : "";
+        const label = `${powerupLabel}${progress}${entity.word}`;
         const width = Math.max(74, ctx.measureText(label).width + 22);
         const x = entity.x + entity.w / 2 - width / 2;
         const y = entity.y - entity.h - 56;
         pixelRect(x, y, width, 34, "#111827");
         pixelRect(x + 3, y + 3, width - 6, 28, entity === currentTarget() ? "#37476c" : entity.optional ? "#26485a" : "#253049");
-        ctx.fillStyle = entity.optional ? "#b9fbff" : "#ffe9a6";
+        ctx.fillStyle = entity.type === "powerup" ? "#d8ffd1" : entity.optional ? "#b9fbff" : "#ffe9a6";
         ctx.fillText(label, entity.x + entity.w / 2, y + 24);
       }
 
