@@ -34,7 +34,7 @@ To do, ordered by impact (highest first):
   - Options: mechanical click, soft tap, none. Persist choice.
   - Signature feature of typing trainers (Monkeytype, keybr) — players hear this thousands of times per session, so letting them tune it is unusually high-impact for the work involved.
 
-- [ ] Add a settings panel.
+- [x] Add a settings panel.
   - Mute toggle, sound theme, default typing mode (beginner/advanced/expert), default difficulty.
   - Reachable from start screen and pause menu.
   - Becomes valuable once the persistence and audio items above are in place.

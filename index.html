@@ -137,7 +137,8 @@
 
     .difficulty,
     .run-modes,
-    .typing-modes {
+    .typing-modes,
+    .settings-options {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
       gap: 8px;
@@ -229,6 +230,44 @@
       box-shadow: none;
       text-decoration: underline;
       text-underline-offset: 3px;
+    }
+
+    .settings-panel {
+      width: min(520px, 100%);
+    }
+
+    #settingsScreen {
+      z-index: 4;
+    }
+
+    .settings-section {
+      margin-top: 18px;
+      text-align: left;
+    }
+
+    .settings-section h3 {
+      margin: 0 0 8px;
+      color: #ffe28b;
+      font-size: 0.86rem;
+      text-transform: uppercase;
+    }
+
+    .settings-section .sound-theme {
+      margin-top: 0;
+    }
+
+    .settings-section .sound-toggle {
+      width: 100%;
+    }
+
+    .settings-options {
+      margin: 0;
+    }
+
+    .settings-actions {
+      display: grid;
+      gap: 8px;
+      margin-top: 18px;
     }
 
     #pauseScreen button {
@@ -478,6 +517,7 @@
       .difficulty,
       .run-modes,
       .typing-modes,
+      .settings-options,
       .best-grid,
       .onboarding-grid,
       .lifetime-grid,
@@ -546,6 +586,7 @@
           <div class="menu-actions">
             <button class="primary" id="startButton">Start Run</button>
             <button class="sound-toggle" id="startMuteButton" type="button" aria-pressed="false">Sound On</button>
+            <button id="startSettingsButton" type="button">Settings</button>
             <div class="sound-theme" aria-label="Keypress sound theme">
               <span class="sound-theme-label">Key Sound</span>
               <div class="sound-theme-options" role="group" aria-label="Keypress sound theme">
@@ -593,6 +634,43 @@
         </div>
       </div>
 
+      <div class="overlay" id="settingsScreen" role="dialog" aria-modal="true" aria-labelledby="settingsTitle" hidden>
+        <div class="menu settings-panel">
+          <h2 id="settingsTitle">Settings</h2>
+          <section class="settings-section">
+            <h3>Audio</h3>
+            <button class="sound-toggle" id="settingsMuteButton" type="button" aria-pressed="false">Sound On</button>
+            <div class="sound-theme" aria-label="Keypress sound theme">
+              <span class="sound-theme-label">Key Sound</span>
+              <div class="sound-theme-options" role="group" aria-label="Keypress sound theme">
+                <button class="active" type="button" data-sound-theme="mechanical" aria-pressed="true">Click</button>
+                <button type="button" data-sound-theme="soft" aria-pressed="false">Tap</button>
+                <button type="button" data-sound-theme="none" aria-pressed="false">None</button>
+              </div>
+            </div>
+          </section>
+          <section class="settings-section">
+            <h3>Default Difficulty</h3>
+            <div class="settings-options" role="group" aria-label="Default difficulty">
+              <button type="button" data-default-difficulty="easy">Easy</button>
+              <button type="button" data-default-difficulty="normal">Normal</button>
+              <button type="button" data-default-difficulty="hard">Hard</button>
+            </div>
+          </section>
+          <section class="settings-section">
+            <h3>Default Typing Mode</h3>
+            <div class="settings-options" role="group" aria-label="Default typing mode">
+              <button type="button" data-default-typing-mode="beginner">Beginner</button>
+              <button type="button" data-default-typing-mode="advanced">Advanced</button>
+              <button type="button" data-default-typing-mode="expert">Expert</button>
+            </div>
+          </section>
+          <div class="settings-actions">
+            <button class="primary" id="closeSettingsButton" type="button">Done</button>
+          </div>
+        </div>
+      </div>
+
       <div class="overlay" id="gameOverScreen" hidden>
         <div class="menu">
           <h2>Game Over</h2>
@@ -620,6 +698,7 @@
           <h2>Paused</h2>
           <button class="primary" id="resumeButton">Resume</button>
           <button class="sound-toggle" id="pauseMuteButton" type="button" aria-pressed="false">Sound On</button>
+          <button id="pauseSettingsButton" type="button">Settings</button>
           <div class="sound-theme" aria-label="Keypress sound theme">
             <span class="sound-theme-label">Key Sound</span>
             <div class="sound-theme-options" role="group" aria-label="Keypress sound theme">
@@ -650,6 +729,7 @@
         typebar: document.getElementById("typebar"),
         startScreen: document.getElementById("startScreen"),
         onboardingScreen: document.getElementById("onboardingScreen"),
+        settingsScreen: document.getElementById("settingsScreen"),
         gameOverScreen: document.getElementById("gameOverScreen"),
         pauseScreen: document.getElementById("pauseScreen"),
         finalScore: document.getElementById("finalScore"),
@@ -676,6 +756,9 @@
         lifetimeHeatmap: document.getElementById("lifetimeHeatmap"),
         newBestBanner: document.getElementById("newBestBanner"),
         gameOverText: document.getElementById("gameOverText"),
+        startSettingsButton: document.getElementById("startSettingsButton"),
+        pauseSettingsButton: document.getElementById("pauseSettingsButton"),
+        closeSettingsButton: document.getElementById("closeSettingsButton"),
         muteButtons: Array.from(document.querySelectorAll(".sound-toggle"))
       };
 
@@ -1245,8 +1328,12 @@
       const LIFETIME_STATS_KEY = "typequest-lifetime-stats-v1";
       const SOUND_MUTED_KEY = "typequest-sound-muted-v1";
       const KEYPRESS_SOUND_THEME_KEY = "typequest-keypress-sound-theme-v1";
+      const DEFAULT_DIFFICULTY_KEY = "typequest-default-difficulty-v1";
+      const DEFAULT_TYPING_MODE_KEY = "typequest-default-typing-mode-v1";
       const ONBOARDING_SEEN_KEY = "typequest-onboarding-seen-v1";
       const KEYPRESS_SOUND_THEMES = ["mechanical", "soft", "none"];
+      const DIFFICULTIES = ["easy", "normal", "hard"];
+      const TYPING_MODE_KEYS = ["beginner", "advanced", "expert"];
       const PERSONAL_BEST_FIELDS = [
         { key: "netWpm", label: "Net WPM" },
         { key: "rawWpm", label: "Raw WPM" },
@@ -1259,6 +1346,9 @@
       let audioCtx;
       let soundMuted = readSoundMuted();
       let keypressSoundTheme = readKeypressSoundTheme();
+      let defaultDifficulty = readDefaultDifficulty();
+      let defaultTypingMode = readDefaultTypingMode();
+      let settingsReturnFocus = null;
       let state = makeState();
       let last = performance.now();
       let raf = 0;
@@ -1267,8 +1357,8 @@
         return {
           mode: "menu",
           runMode: "endless",
-          difficulty: "easy",
-          typingMode: "beginner",
+          difficulty: defaultDifficulty,
+          typingMode: defaultTypingMode,
           seed: 0,
           rngState: 0,
           elapsed: 0,
@@ -1535,6 +1625,42 @@
         return true;
       }
 
+      function readDefaultDifficulty() {
+        try {
+          const storedDifficulty = window.localStorage.getItem(DEFAULT_DIFFICULTY_KEY);
+          return DIFFICULTIES.includes(storedDifficulty) ? storedDifficulty : "easy";
+        } catch (error) {
+          return "easy";
+        }
+      }
+
+      function writeDefaultDifficulty(difficulty) {
+        try {
+          window.localStorage.setItem(DEFAULT_DIFFICULTY_KEY, difficulty);
+        } catch (error) {
+          return false;
+        }
+        return true;
+      }
+
+      function readDefaultTypingMode() {
+        try {
+          const storedMode = window.localStorage.getItem(DEFAULT_TYPING_MODE_KEY);
+          return TYPING_MODE_KEYS.includes(storedMode) ? storedMode : "beginner";
+        } catch (error) {
+          return "beginner";
+        }
+      }
+
+      function writeDefaultTypingMode(mode) {
+        try {
+          window.localStorage.setItem(DEFAULT_TYPING_MODE_KEY, mode);
+        } catch (error) {
+          return false;
+        }
+        return true;
+      }
+
       function readOnboardingSeen() {
         try {
           return window.localStorage.getItem(ONBOARDING_SEEN_KEY) === "true";
@@ -1554,6 +1680,10 @@
 
       function isOnboardingOpen() {
         return !els.onboardingScreen.hidden;
+      }
+
+      function isSettingsOpen() {
+        return !els.settingsScreen.hidden;
       }
 
       function focusWithoutScroll(element) {
@@ -1580,6 +1710,19 @@
         focusWithoutScroll(document.getElementById("howToPlayButton"));
       }
 
+      function openSettings(returnFocusElement) {
+        settingsReturnFocus = returnFocusElement || document.activeElement;
+        updateSettingsDefaultButtons();
+        els.settingsScreen.hidden = false;
+        focusWithoutScroll(els.closeSettingsButton);
+      }
+
+      function closeSettings() {
+        els.settingsScreen.hidden = true;
+        focusWithoutScroll(settingsReturnFocus);
+        settingsReturnFocus = null;
+      }
+
       function updateMuteButtons() {
         els.muteButtons.forEach(button => {
           button.textContent = soundMuted ? "Sound Off" : "Sound On";
@@ -1600,6 +1743,63 @@
         keypressSoundTheme = theme;
         writeKeypressSoundTheme(keypressSoundTheme);
         updateKeypressSoundThemeButtons();
+      }
+
+      function updateDifficultyButtons() {
+        document.querySelectorAll("[data-difficulty]").forEach(button => {
+          button.classList.toggle("active", button.dataset.difficulty === state.difficulty);
+        });
+      }
+
+      function updateTypingModeButtons() {
+        document.querySelectorAll("[data-typing-mode]").forEach(button => {
+          button.classList.toggle("active", button.dataset.typingMode === state.typingMode);
+        });
+      }
+
+      function updateSettingsDefaultButtons() {
+        document.querySelectorAll("[data-default-difficulty]").forEach(button => {
+          const isActive = button.dataset.defaultDifficulty === defaultDifficulty;
+          button.classList.toggle("active", isActive);
+          button.setAttribute("aria-pressed", String(isActive));
+        });
+        document.querySelectorAll("[data-default-typing-mode]").forEach(button => {
+          const isActive = button.dataset.defaultTypingMode === defaultTypingMode;
+          button.classList.toggle("active", isActive);
+          button.setAttribute("aria-pressed", String(isActive));
+        });
+      }
+
+      function setDifficulty(difficulty) {
+        if (!DIFFICULTIES.includes(difficulty)) return;
+        state.difficulty = difficulty;
+        state.timeLeft = runModes[state.runMode].timed ? palettes[state.difficulty].time : Infinity;
+        updateDifficultyButtons();
+        updatePersonalBestsDisplay();
+        updateHud();
+      }
+
+      function setTypingMode(mode) {
+        if (!TYPING_MODE_KEYS.includes(mode)) return;
+        state.typingMode = mode;
+        updateTypingModeButtons();
+        updateHud();
+      }
+
+      function setDefaultDifficulty(difficulty) {
+        if (!DIFFICULTIES.includes(difficulty)) return;
+        defaultDifficulty = difficulty;
+        writeDefaultDifficulty(defaultDifficulty);
+        updateSettingsDefaultButtons();
+        if (state.mode === "menu" || state.mode === "over") setDifficulty(defaultDifficulty);
+      }
+
+      function setDefaultTypingMode(mode) {
+        if (!TYPING_MODE_KEYS.includes(mode)) return;
+        defaultTypingMode = mode;
+        writeDefaultTypingMode(defaultTypingMode);
+        updateSettingsDefaultButtons();
+        if (state.mode === "menu" || state.mode === "over") setTypingMode(defaultTypingMode);
       }
 
       function toggleSoundMuted() {
@@ -1904,6 +2104,7 @@
         state.countdown = COUNTDOWN_SECONDS;
         els.startScreen.hidden = true;
         els.onboardingScreen.hidden = true;
+        els.settingsScreen.hidden = true;
         els.gameOverScreen.hidden = true;
         els.pauseScreen.hidden = true;
         spawnEntity(660);
@@ -2176,6 +2377,13 @@
       }
 
       function handleKey(event) {
+        if (isSettingsOpen()) {
+          if (event.key === "Escape") {
+            closeSettings();
+            event.preventDefault();
+          }
+          return;
+        }
         if (isOnboardingOpen()) {
           if (event.key === "Escape") {
             closeOnboarding();
@@ -2948,14 +3156,7 @@
       }
 
       document.querySelectorAll("[data-difficulty]").forEach(button => {
-        button.addEventListener("click", () => {
-          document.querySelectorAll("[data-difficulty]").forEach(b => b.classList.remove("active"));
-          button.classList.add("active");
-          state.difficulty = button.dataset.difficulty;
-          state.timeLeft = palettes[state.difficulty].time;
-          updatePersonalBestsDisplay();
-          updateHud();
-        });
+        button.addEventListener("click", () => setDifficulty(button.dataset.difficulty));
       });
 
       document.querySelectorAll("[data-run-mode]").forEach(button => {
@@ -2969,12 +3170,7 @@
       });
 
       document.querySelectorAll("[data-typing-mode]").forEach(button => {
-        button.addEventListener("click", () => {
-          document.querySelectorAll("[data-typing-mode]").forEach(b => b.classList.remove("active"));
-          button.classList.add("active");
-          state.typingMode = button.dataset.typingMode;
-          updateHud();
-        });
+        button.addEventListener("click", () => setTypingMode(button.dataset.typingMode));
       });
 
       document.getElementById("startButton").addEventListener("click", startGame);
@@ -2983,14 +3179,26 @@
       document.getElementById("restartButton").addEventListener("click", startGame);
       document.getElementById("howToPlayButton").addEventListener("click", () => showOnboarding(true));
       document.getElementById("closeOnboardingButton").addEventListener("click", closeOnboarding);
+      els.startSettingsButton.addEventListener("click", () => openSettings(els.startSettingsButton));
+      els.pauseSettingsButton.addEventListener("click", () => openSettings(els.pauseSettingsButton));
+      els.closeSettingsButton.addEventListener("click", closeSettings);
       els.muteButtons.forEach(button => button.addEventListener("click", toggleSoundMuted));
       document.querySelectorAll("[data-sound-theme]").forEach(button => {
         button.addEventListener("click", () => setKeypressSoundTheme(button.dataset.soundTheme));
+      });
+      document.querySelectorAll("[data-default-difficulty]").forEach(button => {
+        button.addEventListener("click", () => setDefaultDifficulty(button.dataset.defaultDifficulty));
+      });
+      document.querySelectorAll("[data-default-typing-mode]").forEach(button => {
+        button.addEventListener("click", () => setDefaultTypingMode(button.dataset.defaultTypingMode));
       });
       window.addEventListener("keydown", handleKey);
 
       updateMuteButtons();
       updateKeypressSoundThemeButtons();
+      updateDifficultyButtons();
+      updateTypingModeButtons();
+      updateSettingsDefaultButtons();
       updateHud();
       updatePersonalBestsDisplay();
       updateLifetimeStatsDisplay();
