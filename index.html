@@ -190,7 +190,7 @@
     .difficulty button,
     .run-modes button,
     .typing-modes button,
-    .settings-options .mode-option {
+    .settings-options .described-option {
       display: grid;
       gap: 4px;
       align-content: center;
@@ -201,7 +201,7 @@
     }
 
     .typing-modes button,
-    .settings-options .mode-option {
+    .settings-options .described-option {
       min-height: 74px;
     }
 
@@ -228,7 +228,8 @@
     .difficulty button.active .difficulty-description,
     .run-modes button.active .run-mode-description,
     .typing-modes button.active .mode-description,
-    .settings-options .mode-option.active .mode-description {
+    .settings-options .described-option.active .difficulty-description,
+    .settings-options .described-option.active .mode-description {
       color: #fff0bc;
     }
 
@@ -1024,7 +1025,7 @@
               <span class="mode-description">Adds symbols and numbers.</span>
             </button>
           </div>
-          <section class="drill-panel" aria-labelledby="drillTitle">
+          <section class="drill-panel" aria-labelledby="drillTitle" hidden>
             <h2 id="drillTitle">Target Drill</h2>
             <p>Filter the next run to words containing a weak letter or custom bigram.</p>
             <div class="drill-suggestions" id="drillSuggestions" role="group" aria-label="Target drill suggestions"></div>
@@ -1132,23 +1133,32 @@
           <section class="settings-section">
             <h3>Default Difficulty</h3>
             <div class="settings-options" role="group" aria-label="Default difficulty">
-              <button type="button" data-default-difficulty="easy">Easy</button>
-              <button type="button" data-default-difficulty="normal">Normal</button>
-              <button type="button" data-default-difficulty="hard">Hard</button>
+              <button class="described-option" type="button" data-default-difficulty="easy">
+                <span class="difficulty-label">Easy</span>
+                <span class="difficulty-description">Short common words, slow threats.</span>
+              </button>
+              <button class="described-option" type="button" data-default-difficulty="normal">
+                <span class="difficulty-label">Normal</span>
+                <span class="difficulty-description">Balanced runner pacing.</span>
+              </button>
+              <button class="described-option" type="button" data-default-difficulty="hard">
+                <span class="difficulty-label">Hard</span>
+                <span class="difficulty-description">Longer words, strict pacing.</span>
+              </button>
             </div>
           </section>
           <section class="settings-section">
             <h3>Default Typing Mode</h3>
             <div class="settings-options" role="group" aria-label="Default typing mode">
-              <button class="mode-option" type="button" data-default-typing-mode="beginner">
+              <button class="described-option" type="button" data-default-typing-mode="beginner">
                 <span class="mode-label">Beginner</span>
                 <span class="mode-description">Lowercase words only.</span>
               </button>
-              <button class="mode-option" type="button" data-default-typing-mode="advanced">
+              <button class="described-option" type="button" data-default-typing-mode="advanced">
                 <span class="mode-label">Advanced</span>
                 <span class="mode-description">Adds punctuation and case.</span>
               </button>
-              <button class="mode-option" type="button" data-default-typing-mode="expert">
+              <button class="described-option" type="button" data-default-typing-mode="expert">
                 <span class="mode-label">Expert</span>
                 <span class="mode-description">Adds symbols and numbers.</span>
               </button>
