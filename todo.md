@@ -65,7 +65,7 @@ To do, ordered by impact (highest first):
   - Currently every level swap snaps to a new palette mid-frame.
   - Crossfade sky/ground colors over ~0.6s on level change; theme parameters are already centrally defined so a per-frame interpolation is straightforward.
 
-- [ ] Show a small entity/powerup legend on the start screen.
+- [x] Show a small entity/powerup legend on the start screen.
   - One-row icon strip under "How to play" naming each entity (rock = jump, enemy = attack, chest = optional treasure, etc.) and each powerup color.
   - The onboarding cards explain the categories but don't pair each label with the actual sprite the player will see; players currently learn by losing hearts.
 

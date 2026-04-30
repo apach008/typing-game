@@ -485,6 +485,62 @@
       line-height: 1.35;
     }
 
+    .entity-legend {
+      margin: 14px 0 12px;
+      border: 1px solid #404d70;
+      background: rgba(16, 23, 42, 0.92);
+      padding: 10px;
+    }
+
+    .entity-legend h2 {
+      margin: 0 0 8px;
+      color: #ffe28b;
+      font-size: 16px;
+      line-height: 1.1;
+      text-shadow: none;
+    }
+
+    .entity-legend-strip {
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      padding-bottom: 2px;
+      scrollbar-width: thin;
+    }
+
+    .entity-legend-item {
+      flex: 0 0 92px;
+      border: 1px solid #2f3957;
+      background: #10172a;
+      padding: 7px 6px 8px;
+      text-align: center;
+    }
+
+    .entity-legend-sprite {
+      display: block;
+      width: 48px;
+      height: 48px;
+      margin: 0 auto 5px;
+      image-rendering: pixelated;
+    }
+
+    .entity-legend-label {
+      display: block;
+      color: #ffe28b;
+      font-size: 12px;
+      font-weight: 800;
+      line-height: 1.1;
+      text-transform: uppercase;
+    }
+
+    .entity-legend-action {
+      display: block;
+      margin-top: 2px;
+      color: #ddd5b5;
+      font-size: 11px;
+      line-height: 1.1;
+    }
+
     .best-panel {
       margin: 16px 0;
       border: 1px solid #404d70;
@@ -968,6 +1024,15 @@
         grid-template-columns: 1fr;
       }
 
+      .entity-legend-strip {
+        flex-wrap: wrap;
+        overflow-x: visible;
+      }
+
+      .entity-legend-item {
+        flex: 1 1 86px;
+      }
+
       .recent-run {
         grid-template-columns: 1fr 1fr;
       }
@@ -1010,6 +1075,61 @@
         <div class="menu">
           <h1>TypeQuest Runner</h1>
           <p>Type the word above the next threat. Obstacles make the hero jump, enemies trigger attacks, and every clean word keeps the run alive.</p>
+          <section class="entity-legend" aria-labelledby="entityLegendTitle">
+            <h2 id="entityLegendTitle">How to Play</h2>
+            <div class="entity-legend-strip">
+              <div class="entity-legend-item">
+                <canvas class="entity-legend-sprite" width="64" height="64" data-legend-sprite="obstacle" aria-hidden="true"></canvas>
+                <span class="entity-legend-label">Rock</span>
+                <span class="entity-legend-action">Jump</span>
+              </div>
+              <div class="entity-legend-item">
+                <canvas class="entity-legend-sprite" width="64" height="64" data-legend-sprite="bridge" aria-hidden="true"></canvas>
+                <span class="entity-legend-label">Bridge</span>
+                <span class="entity-legend-action">Jump</span>
+              </div>
+              <div class="entity-legend-item">
+                <canvas class="entity-legend-sprite" width="64" height="64" data-legend-sprite="enemy" aria-hidden="true"></canvas>
+                <span class="entity-legend-label">Enemy</span>
+                <span class="entity-legend-action">Attack</span>
+              </div>
+              <div class="entity-legend-item">
+                <canvas class="entity-legend-sprite" width="64" height="64" data-legend-sprite="flying" aria-hidden="true"></canvas>
+                <span class="entity-legend-label">Flying</span>
+                <span class="entity-legend-action">Attack</span>
+              </div>
+              <div class="entity-legend-item">
+                <canvas class="entity-legend-sprite" width="64" height="64" data-legend-sprite="shielded" aria-hidden="true"></canvas>
+                <span class="entity-legend-label">Shielded</span>
+                <span class="entity-legend-action">2 words</span>
+              </div>
+              <div class="entity-legend-item">
+                <canvas class="entity-legend-sprite" width="64" height="64" data-legend-sprite="chest" aria-hidden="true"></canvas>
+                <span class="entity-legend-label">Chest</span>
+                <span class="entity-legend-action">Optional</span>
+              </div>
+              <div class="entity-legend-item">
+                <canvas class="entity-legend-sprite" width="64" height="64" data-legend-sprite="time" aria-hidden="true"></canvas>
+                <span class="entity-legend-label">Time</span>
+                <span class="entity-legend-action">+seconds</span>
+              </div>
+              <div class="entity-legend-item">
+                <canvas class="entity-legend-sprite" width="64" height="64" data-legend-sprite="focus" aria-hidden="true"></canvas>
+                <span class="entity-legend-label">Focus</span>
+                <span class="entity-legend-action">Slow</span>
+              </div>
+              <div class="entity-legend-item">
+                <canvas class="entity-legend-sprite" width="64" height="64" data-legend-sprite="shield" aria-hidden="true"></canvas>
+                <span class="entity-legend-label">Shield</span>
+                <span class="entity-legend-action">Block</span>
+              </div>
+              <div class="entity-legend-item">
+                <canvas class="entity-legend-sprite" width="64" height="64" data-legend-sprite="magnet" aria-hidden="true"></canvas>
+                <span class="entity-legend-label">Magnet</span>
+                <span class="entity-legend-action">Pickup</span>
+              </div>
+            </div>
+          </section>
           <div class="run-modes" role="group" aria-label="Run mode">
             <button class="active" data-run-mode="endless">
               <span class="run-mode-label">Endless</span>
@@ -1958,6 +2078,26 @@
         { id: "shield", label: "Shield", charges: 1 },
         { id: "magnet", label: "Magnet", charges: 5 }
       ];
+
+      const powerupColors = {
+        time: "#67c7df",
+        focus: "#9ee37d",
+        shield: "#b9c8ff",
+        magnet: "#f5c452"
+      };
+
+      const legendSprites = {
+        obstacle: { sprite: sprites.obstacle, palette: spritePalettes.obstacle, scale: 4, x: 8, y: 16 },
+        bridge: { sprite: sprites.bridge, palette: spritePalettes.bridge, scale: 4, x: 4, y: 22 },
+        enemy: { sprite: sprites.enemy, palette: spritePalettes.grunt, scale: 4, x: 8, y: 14 },
+        flying: { sprite: sprites.flying, palette: spritePalettes.bat, scale: 4, x: 8, y: 18 },
+        shielded: { sprite: sprites.shielded, palette: spritePalettes.shield, scale: 4, x: 8, y: 13 },
+        chest: { sprite: sprites.chest, palette: spritePalettes.chest, scale: 4, x: 12, y: 18 },
+        time: { sprite: sprites.powerup, palette: { ...spritePalettes.powerup, C: powerupColors.time }, scale: 5, x: 12, y: 15 },
+        focus: { sprite: sprites.powerup, palette: { ...spritePalettes.powerup, C: powerupColors.focus }, scale: 5, x: 12, y: 15 },
+        shield: { sprite: sprites.powerup, palette: { ...spritePalettes.powerup, C: powerupColors.shield }, scale: 5, x: 12, y: 15 },
+        magnet: { sprite: sprites.powerup, palette: { ...spritePalettes.powerup, C: powerupColors.magnet }, scale: 5, x: 12, y: 15 }
+      };
 
       const typingModes = {
         beginner: { label: "Beginner", punctuation: 0, symbol: 0, number: 0, titleCase: false, uppercase: false },
@@ -4250,19 +4390,34 @@
         ctx.fillRect(Math.round(x), Math.round(y), Math.round(w), Math.round(h));
       }
 
-      function drawPixelSprite(sprite, palette, x, y, scale = 4, options = {}) {
-        ctx.save();
-        ctx.translate(Math.round(x), Math.round(y));
-        if (options.alpha !== undefined) ctx.globalAlpha = options.alpha;
+      function drawPixelSpriteTo(targetCtx, sprite, palette, x, y, scale = 4, options = {}) {
+        targetCtx.save();
+        targetCtx.translate(Math.round(x), Math.round(y));
+        if (options.alpha !== undefined) targetCtx.globalAlpha = options.alpha;
         for (let row = 0; row < sprite.length; row++) {
           for (let col = 0; col < sprite[row].length; col++) {
             const key = sprite[row][col];
             if (key === ".") continue;
-            ctx.fillStyle = palette[key];
-            ctx.fillRect(col * scale, row * scale, scale, scale);
+            targetCtx.fillStyle = palette[key];
+            targetCtx.fillRect(col * scale, row * scale, scale, scale);
           }
         }
-        ctx.restore();
+        targetCtx.restore();
+      }
+
+      function drawPixelSprite(sprite, palette, x, y, scale = 4, options = {}) {
+        drawPixelSpriteTo(ctx, sprite, palette, x, y, scale, options);
+      }
+
+      function renderStartLegend() {
+        document.querySelectorAll("[data-legend-sprite]").forEach(canvasEl => {
+          const config = legendSprites[canvasEl.dataset.legendSprite];
+          const legendCtx = canvasEl.getContext("2d");
+          if (!config || !legendCtx) return;
+          legendCtx.imageSmoothingEnabled = false;
+          legendCtx.clearRect(0, 0, canvasEl.width, canvasEl.height);
+          drawPixelSpriteTo(legendCtx, config.sprite, config.palette, config.x, config.y, config.scale);
+        });
       }
 
       function animationFrame(frames, t, fps = 7, offset = 0) {
@@ -4507,12 +4662,7 @@
           drawPixelSprite(animationFrame(spriteAnimations.chest, t, 4, entity.id), spritePalettes.chest, entity.x + 3, entity.y - 42, 4);
           pixelRect(entity.x + 8, entity.y - 48, 8, 8, "rgba(255, 226, 139, 0.38)");
         } else if (entity.type === "powerup") {
-          const color = {
-            time: "#67c7df",
-            focus: "#9ee37d",
-            shield: "#b9c8ff",
-            magnet: "#f5c452"
-          }[entity.powerup.id];
+          const color = powerupColors[entity.powerup.id];
           const palette = { ...spritePalettes.powerup, C: color };
           const hover = Math.sin(t * 7 + entity.id) * 4;
           drawPixelSprite(animationFrame(spriteAnimations.powerup, t, 8, entity.id), palette, entity.x + 1, entity.y - 38 + hover, 4);
@@ -4841,6 +4991,7 @@
       updateLifetimeStatsDisplay();
       updateAchievementChecklist();
       updateDailyDisplay();
+      renderStartLegend();
       spawnEntity(650);
       spawnEntity(920);
       if (!readOnboardingSeen()) showOnboarding();
