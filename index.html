@@ -133,7 +133,8 @@
       line-height: 1.45;
     }
 
-    .difficulty {
+    .difficulty,
+    .run-modes {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
       gap: 8px;
@@ -250,6 +251,7 @@
       }
 
       .difficulty,
+      .run-modes,
       .final-grid {
         grid-template-columns: 1fr;
       }
@@ -277,6 +279,11 @@
         <div class="menu">
           <h1>TypeQuest Runner</h1>
           <p>Type the word above the next threat. Obstacles make the hero jump, enemies trigger attacks, and every clean word keeps the run alive.</p>
+          <div class="run-modes" role="group" aria-label="Run mode">
+            <button class="active" data-run-mode="endless">Endless</button>
+            <button data-run-mode="adventure">Adventure</button>
+            <button data-run-mode="daily">Daily</button>
+          </div>
           <div class="difficulty" role="group" aria-label="Difficulty">
             <button class="active" data-difficulty="easy">Easy</button>
             <button data-difficulty="normal">Normal</button>
@@ -329,6 +336,12 @@
         easy: { speed: 205, speedLevel: 7, spawn: 1.55, spawnLevel: 0.035, spawnMin: 1.05, time: 105, wordMin: 3, wordMax: 5 },
         normal: { speed: 275, speedLevel: 9, spawn: 1.2, spawnLevel: 0.045, spawnMin: 0.9, time: 95, wordMin: 4, wordMax: 7 },
         hard: { speed: 345, speedLevel: 11, spawn: 0.95, spawnLevel: 0.05, spawnMin: 0.78, time: 85, wordMin: 5, wordMax: 8 }
+      };
+
+      const runModes = {
+        endless: { label: "Endless", timed: false, maxLevel: 9, finalBossLevel: null, daily: false },
+        adventure: { label: "Adventure", timed: true, maxLevel: 5, finalBossLevel: 5, daily: false },
+        daily: { label: "Daily", timed: true, maxLevel: 9, finalBossLevel: null, daily: true }
       };
 
       const wordCategories = {
@@ -463,6 +476,7 @@
       const BOSS_WORDS_PER_LEVEL = 2;
       const BOSS_SCORE_SCALE = 2.6;
       const BOSS_TIME_BONUS = 8;
+      const ADVENTURE_CLEAR_BONUS = 1000;
       const HERO_HIT_X = 154;
       const BASE_SPAWN_X = 1040;
       const DIFFICULTY_REACTION_BUFFER = {
@@ -479,9 +493,12 @@
       function makeState() {
         return {
           mode: "menu",
+          runMode: "endless",
           difficulty: "easy",
+          seed: 0,
+          rngState: 0,
           elapsed: 0,
-          timeLeft: 100,
+          timeLeft: Infinity,
           countdown: 0,
           distance: 0,
           spawnClock: 0,
@@ -541,11 +558,11 @@
         const cfg = palettes[state.difficulty];
         const words = wordCategories[category] || wordCategories.obstacle;
         if (category === "boss") {
-          return words[Math.floor(Math.random() * words.length)];
+          return words[Math.floor(random() * words.length)];
         }
         const pool = words.filter(word => word.length >= cfg.wordMin && word.length <= cfg.wordMax);
         const eligibleWords = pool.length ? pool : words;
-        return eligibleWords[Math.floor(Math.random() * eligibleWords.length)];
+        return eligibleWords[Math.floor(random() * eligibleWords.length)];
       }
 
       function pickEntityKind() {
@@ -556,7 +573,7 @@
           weight: kind.weight * (theme.hazards[kind.type] || 1)
         }));
         const totalWeight = weightedKinds.reduce((sum, item) => sum + item.weight, 0);
-        let roll = Math.random() * totalWeight;
+        let roll = random() * totalWeight;
         for (const item of weightedKinds) {
           roll -= item.weight;
           if (roll <= 0) return item.kind;
@@ -605,7 +622,7 @@
         const kind = pickEntityKind();
         const category = kind.category || kind.type;
         const words = Array.from({ length: kind.wordCount || 1 }, () => pickWord(category));
-        const powerup = kind.type === "powerup" ? powerupTypes[Math.floor(Math.random() * powerupTypes.length)] : null;
+        const powerup = kind.type === "powerup" ? powerupTypes[Math.floor(random() * powerupTypes.length)] : null;
         const word = words[0];
         state.entities.push({
           x: nextSpawnX(words.join(""), forceX, kind.timingScale),
@@ -717,10 +734,14 @@
       function startGame() {
         audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
         const selectedDifficulty = state.difficulty;
+        const selectedRunMode = state.runMode;
         state = makeState();
         state.difficulty = selectedDifficulty;
+        state.runMode = selectedRunMode;
+        state.seed = runModes[state.runMode].daily ? dailySeed() : Math.floor(Math.random() * 0xffffffff);
+        state.rngState = state.seed;
         state.mode = "playing";
-        state.timeLeft = palettes[state.difficulty].time;
+        state.timeLeft = runModes[state.runMode].timed ? palettes[state.difficulty].time : Infinity;
         state.countdown = COUNTDOWN_SECONDS;
         els.startScreen.hidden = true;
         els.gameOverScreen.hidden = true;
@@ -730,15 +751,46 @@
         updateHud();
       }
 
-      function endGame(message) {
+      function endGame(message, won = false) {
         state.mode = "over";
+        document.querySelector("#gameOverScreen h2").textContent = won ? "Victory" : "Game Over";
         els.gameOverText.textContent = message;
         els.finalScore.textContent = state.score;
         els.finalWpm.textContent = currentWpm();
         els.finalAccuracy.textContent = `${currentAccuracy()}%`;
         els.finalStreak.textContent = state.bestStreak;
         els.gameOverScreen.hidden = false;
-        beep("hit");
+        beep(won ? "level" : "hit");
+      }
+
+      function random() {
+        if (!runModes[state.runMode].daily) return Math.random();
+        state.rngState = (state.rngState * 1664525 + 1013904223) >>> 0;
+        return state.rngState / 0x100000000;
+      }
+
+      function dailySeed() {
+        const today = new Date();
+        const stamp = `${today.getFullYear()}-${today.getMonth() + 1}-${today.getDate()}`;
+        let seed = 2166136261;
+        const key = `${stamp}-${state.difficulty}`;
+        for (let i = 0; i < key.length; i++) {
+          seed ^= key.charCodeAt(i);
+          seed = Math.imul(seed, 16777619);
+        }
+        return seed >>> 0;
+      }
+
+      function targetLevel() {
+        const mode = runModes[state.runMode];
+        return Math.min(mode.maxLevel, 1 + Math.floor(state.elapsed / 18));
+      }
+
+      function shouldStartBoss(level) {
+        const mode = runModes[state.runMode];
+        if (state.boss || state.defeatedBossLevels.includes(level)) return false;
+        if (mode.finalBossLevel === level) return true;
+        return level % BOSS_LEVEL_INTERVAL === 0;
       }
 
       function currentTarget() {
@@ -773,6 +825,11 @@
           state.boss = null;
           state.defeatedBossLevels.push(target.level);
           state.timeLeft += BOSS_TIME_BONUS;
+          if (state.runMode === "adventure" && target.level === runModes.adventure.finalBossLevel) {
+            state.score += ADVENTURE_CLEAR_BONUS;
+            endGame(`Adventure cleared. Final boss defeated with ${Math.max(0, state.hearts)} hearts left.`, true);
+            return;
+          }
           triggerComboBurst(`Boss defeated +${BOSS_TIME_BONUS}s`, 1.4);
           beep("level");
         }
@@ -875,7 +932,7 @@
         els.wpm.textContent = currentWpm();
         els.accuracy.textContent = `${currentAccuracy()}%`;
         els.streak.textContent = state.streak;
-        els.timer.textContent = Math.max(0, Math.ceil(state.timeLeft));
+        els.timer.textContent = runModes[state.runMode].timed ? Math.max(0, Math.ceil(state.timeLeft)) : `${Math.floor(state.elapsed)}s`;
         els.score.textContent = state.score;
         els.level.textContent = state.level;
         els.hearts.textContent = `${Math.max(0, state.hearts)}/${STARTING_HEARTS}`;
@@ -916,16 +973,16 @@
 
         const cfg = palettes[state.difficulty];
         state.elapsed += dt;
-        state.timeLeft -= dt;
+        if (runModes[state.runMode].timed) state.timeLeft -= dt;
         const previousTheme = state.themeIndex;
-        state.level = Math.min(9, 1 + Math.floor(state.elapsed / 18));
+        state.level = targetLevel();
         state.themeIndex = Math.min(levelThemes.length - 1, state.level - 1);
         if (state.themeIndex !== previousTheme) {
           triggerComboBurst(currentTheme().label, 1.05);
         }
         const speed = currentSpeed();
         state.distance += speed * dt;
-        if (!state.boss && state.level % BOSS_LEVEL_INTERVAL === 0 && !state.defeatedBossLevels.includes(state.level)) {
+        if (shouldStartBoss(state.level)) {
           startBossEncounter(state.level);
         }
         state.spawnClock += state.boss ? 0 : dt;
@@ -940,7 +997,7 @@
         if (!state.boss && state.spawnClock >= state.nextSpawn) {
           state.spawnClock = 0;
           const theme = currentTheme();
-          const baseSpawn = Math.max(cfg.spawnMin, cfg.spawn - state.level * cfg.spawnLevel + Math.random() * 0.45);
+          const baseSpawn = Math.max(cfg.spawnMin, cfg.spawn - state.level * cfg.spawnLevel + random() * 0.45);
           state.nextSpawn = baseSpawn * warmupSpawnFactor() * (theme.spawnScale || 1);
           spawnEntity();
         }
@@ -956,12 +1013,13 @@
 
         const danger = currentTarget();
         if (danger && danger.type === "boss" && danger.attackClock <= 0 && !danger.done) {
+          const retryBoss = state.runMode === "adventure" && danger.level === runModes.adventure.finalBossLevel && state.hearts > 1;
           missTarget(danger);
           state.boss = null;
-          state.defeatedBossLevels.push(danger.level);
+          if (!retryBoss) state.defeatedBossLevels.push(danger.level);
         } else if (danger && danger.x < HERO_HIT_X && !danger.done) {
           missTarget(danger);
-        } else if (state.timeLeft <= 0) {
+        } else if (runModes[state.runMode].timed && state.timeLeft <= 0) {
           endGame("Time ran out on the road.");
         }
 
@@ -1219,6 +1277,16 @@
           button.classList.add("active");
           state.difficulty = button.dataset.difficulty;
           state.timeLeft = palettes[state.difficulty].time;
+          updateHud();
+        });
+      });
+
+      document.querySelectorAll("[data-run-mode]").forEach(button => {
+        button.addEventListener("click", () => {
+          document.querySelectorAll("[data-run-mode]").forEach(b => b.classList.remove("active"));
+          button.classList.add("active");
+          state.runMode = button.dataset.runMode;
+          state.timeLeft = runModes[state.runMode].timed ? palettes[state.difficulty].time : Infinity;
           updateHud();
         });
       });

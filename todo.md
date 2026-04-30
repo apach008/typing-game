@@ -64,7 +64,7 @@
   - Forest, ruins, lava cave, sky bridge, castle gate.
   - Each theme can introduce one new hazard pattern.
 
-- [ ] Add win condition options.
+- [x] Add win condition options.
   - Endless mode: survive as long as possible.
   - Adventure mode: clear 5 themed stages and defeat a final boss.
   - Daily challenge: fixed seed and word list for comparable scores.
