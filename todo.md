@@ -10,7 +10,7 @@
   - Gives players time to put their hands on the keyboard after pressing Start.
   - Prevents the first word from feeling unfair.
 
-- [ ] Prevent impossible spawn clusters.
+- [x] Prevent impossible spawn clusters.
   - Add minimum spacing between active entities based on current speed, word length, and difficulty.
   - Avoid situations where two words arrive so close together that completing the first still guarantees failure on the second.
 

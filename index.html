@@ -335,6 +335,13 @@
       ];
 
       const COUNTDOWN_SECONDS = 3;
+      const HERO_HIT_X = 154;
+      const BASE_SPAWN_X = 1040;
+      const DIFFICULTY_REACTION_BUFFER = {
+        easy: 1.2,
+        normal: 1.0,
+        hard: 0.85
+      };
 
       let audioCtx;
       let state = makeState();
@@ -394,15 +401,36 @@
         return pool[Math.floor(Math.random() * pool.length)];
       }
 
+      function currentSpeed() {
+        const cfg = palettes[state.difficulty];
+        return cfg.speed + state.level * cfg.speedLevel;
+      }
+
+      function spacingForWord(word, speed) {
+        const secondsToType = (0.36 + word.length * 0.22) * DIFFICULTY_REACTION_BUFFER[state.difficulty];
+        return Math.round(74 + speed * secondsToType);
+      }
+
+      function nextSpawnX(word, preferredX) {
+        const speed = currentSpeed();
+        const requestedX = preferredX || BASE_SPAWN_X;
+        const requiredSpacing = spacingForWord(word, speed);
+        const nearestAhead = state.entities
+          .filter(entity => !entity.done && entity.x > HERO_HIT_X)
+          .reduce((rightmost, entity) => Math.max(rightmost, entity.x), requestedX - requiredSpacing);
+        return Math.max(requestedX, nearestAhead + requiredSpacing);
+      }
+
       function spawnEntity(forceX) {
         const type = Math.random() < 0.52 ? "obstacle" : "enemy";
+        const word = pickWord();
         state.entities.push({
-          x: forceX || canvas.width + 80,
+          x: nextSpawnX(word, forceX),
           y: type === "enemy" ? 390 : 412,
           w: type === "enemy" ? 44 : 38,
           h: type === "enemy" ? 46 : 34,
           type,
-          word: pickWord(),
+          word,
           done: false,
           pop: 0
         });
@@ -536,7 +564,7 @@
         }
 
         const cfg = palettes[state.difficulty];
-        const speed = cfg.speed + state.level * cfg.speedLevel;
+        const speed = currentSpeed();
         state.elapsed += dt;
         state.timeLeft -= dt;
         state.distance += speed * dt;
@@ -558,7 +586,7 @@
         }
 
         const danger = currentTarget();
-        if (danger && danger.x < 154 && !danger.done) {
+        if (danger && danger.x < HERO_HIT_X && !danger.done) {
           endGame(`The word "${danger.word}" reached the hero.`);
         } else if (state.timeLeft <= 0) {
           endGame("Time ran out on the road.");
