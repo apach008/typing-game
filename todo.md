@@ -2,7 +2,7 @@
 
 To do, ordered by impact (highest first):
 
-- [ ] Auto-pause when the window loses focus or visibility.
+- [x] Auto-pause when the window loses focus or visibility.
   - Listen for `blur` and `visibilitychange` and call `pauseGame()` when the run is active.
   - On resume, replay the 3s countdown so the player isn't punished by an off-screen heart loss.
   - Standard expectation in any timed game; without it, alt-tabbing silently kills runs.

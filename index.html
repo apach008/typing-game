@@ -2299,6 +2299,7 @@
       function resumeGame() {
         if (state.mode !== "paused") return;
         state.mode = "playing";
+        state.countdown = COUNTDOWN_SECONDS;
         els.pauseScreen.hidden = true;
         updateHud();
       }
@@ -3375,6 +3376,12 @@
         button.addEventListener("click", () => setDefaultTypingMode(button.dataset.defaultTypingMode));
       });
       window.addEventListener("keydown", handleKey);
+      window.addEventListener("blur", () => {
+        if (state.mode === "playing") pauseGame();
+      });
+      document.addEventListener("visibilitychange", () => {
+        if (document.hidden && state.mode === "playing") pauseGame();
+      });
 
       updateMuteButtons();
       updateKeypressSoundThemeButtons();
