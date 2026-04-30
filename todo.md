@@ -102,7 +102,7 @@
   - Longest streak.
   - Average reaction time per word.
 
-- [ ] Add letter-specific weakness tracking.
+- [x] Add letter-specific weakness tracking.
   - Track which expected letters are most often mistyped.
   - Show a small post-game summary like `Needs work: r, t, p`.
 

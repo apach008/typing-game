@@ -200,6 +200,10 @@
       font-size: 24px;
     }
 
+    .final-stat-wide {
+      grid-column: 1 / -1;
+    }
+
     .typebar {
       position: absolute;
       left: 50%;
@@ -329,6 +333,7 @@
             <div class="final-stat"><span>Mistyped</span><strong id="finalMistypedKeys">0</strong></div>
             <div class="final-stat"><span>Longest Streak</span><strong id="finalLongestStreak">0</strong></div>
             <div class="final-stat"><span>Avg Reaction</span><strong id="finalReactionTime">0.00s</strong></div>
+            <div class="final-stat final-stat-wide"><span>Needs Work</span><strong id="finalWeakLetters">None</strong></div>
           </div>
           <button class="primary" id="againButton">Run Again</button>
         </div>
@@ -362,6 +367,7 @@
         finalMistypedKeys: document.getElementById("finalMistypedKeys"),
         finalLongestStreak: document.getElementById("finalLongestStreak"),
         finalReactionTime: document.getElementById("finalReactionTime"),
+        finalWeakLetters: document.getElementById("finalWeakLetters"),
         gameOverText: document.getElementById("gameOverText")
       };
 
@@ -568,6 +574,7 @@
           adaptiveCorrect: 0,
           adaptiveCompleted: 0,
           adaptiveMisses: 0,
+          letterMistakes: {},
           completedChars: 0,
           streak: 0,
           bestStreak: 0,
@@ -883,6 +890,7 @@
         els.finalMistypedKeys.textContent = currentMistypedKeys();
         els.finalLongestStreak.textContent = state.bestStreak;
         els.finalReactionTime.textContent = `${currentAverageReactionTime()}s`;
+        els.finalWeakLetters.textContent = weakestLettersSummary();
         els.gameOverScreen.hidden = false;
         beep(won ? "level" : "hit");
       }
@@ -1014,6 +1022,20 @@
         return letter === " " ? "space" : letter;
       }
 
+      function recordLetterMistake(letter) {
+        if (!/^[a-z]$/i.test(letter)) return;
+        const normalized = letter.toLowerCase();
+        state.letterMistakes[normalized] = (state.letterMistakes[normalized] || 0) + 1;
+      }
+
+      function weakestLettersSummary() {
+        const weakest = Object.entries(state.letterMistakes)
+          .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+          .slice(0, 3)
+          .map(([letter]) => letter);
+        return weakest.length ? weakest.join(", ") : "None";
+      }
+
       function escapeHtml(value) {
         return value.replace(/[&<>"']/g, char => ({
           "&": "&amp;",
@@ -1106,6 +1128,7 @@
           beep("key");
           if (state.typed === target.word) completeTarget(target);
         } else {
+          recordLetterMistake(expectedLetter(target));
           failKey(target);
         }
       }
