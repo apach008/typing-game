@@ -33,7 +33,7 @@
   - Missing a word costs a heart, knocks the hero back, and clears the current typed input.
   - Instant death can remain an optional Hardcore mode.
 
-- [ ] Add word categories by action type.
+- [x] Add word categories by action type.
   - Obstacles: movement words like `leap`, `vault`, `dash`, `climb`.
   - Enemies: combat words like `slash`, `strike`, `guard`, `blast`.
   - Treasure/powerups: reward words like `gold`, `bonus`, `haste`.

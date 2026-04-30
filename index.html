@@ -329,12 +329,20 @@
         hard: { speed: 345, speedLevel: 11, spawn: 0.95, spawnLevel: 0.05, spawnMin: 0.78, time: 85, wordMin: 5, wordMax: 8 }
       };
 
-      const words = [
-        "torch", "cave", "river", "blade", "jump", "quest", "spark", "rune", "storm", "castle",
-        "bridge", "shadow", "wizard", "goblet", "meteor", "crystal", "valley", "danger", "lantern",
-        "thunder", "treasure", "victory", "ember", "portal", "forest", "dragon", "silver", "shield",
-        "anchor", "charge", "swift", "secret", "keeper", "phantom", "summit", "hammer", "legend"
-      ];
+      const wordCategories = {
+        obstacle: [
+          "hop", "run", "duck", "jump", "leap", "vault", "dash", "climb", "bound", "sprint",
+          "bridge", "sidestep", "scramble", "ascend", "balance", "tumble", "hurdle", "escape"
+        ],
+        enemy: [
+          "jab", "hit", "parry", "slash", "strike", "guard", "blast", "charge", "shield", "smite",
+          "counter", "duel", "hammer", "deflect", "ambush", "vanquish", "cleave", "battle"
+        ],
+        treasure: [
+          "gem", "coin", "gold", "loot", "bonus", "haste", "boost", "prize", "reward", "cache",
+          "silver", "bounty", "fortune", "treasure", "glimmer", "jackpot", "windfall", "riches"
+        ]
+      };
 
       const COUNTDOWN_SECONDS = 3;
       const STARTING_HEARTS = 3;
@@ -401,10 +409,12 @@
         osc.stop(now + settings[1]);
       }
 
-      function pickWord() {
+      function pickWord(category) {
         const cfg = palettes[state.difficulty];
+        const words = wordCategories[category] || wordCategories.obstacle;
         const pool = words.filter(word => word.length >= cfg.wordMin && word.length <= cfg.wordMax);
-        return pool[Math.floor(Math.random() * pool.length)];
+        const eligibleWords = pool.length ? pool : words;
+        return eligibleWords[Math.floor(Math.random() * eligibleWords.length)];
       }
 
       function currentSpeed() {
@@ -441,7 +451,7 @@
 
       function spawnEntity(forceX) {
         const type = Math.random() < 0.52 ? "obstacle" : "enemy";
-        const word = pickWord();
+        const word = pickWord(type);
         state.entities.push({
           x: nextSpawnX(word, forceX),
           y: type === "enemy" ? 390 : 412,
