@@ -416,6 +416,115 @@
         powerup: { type: "powerup", category: "powerup", weight: 7, y: 380, w: 34, h: 34, timingScale: 1.2, scoreScale: 1.1, optional: true }
       };
 
+      const spritePalettes = {
+        hero: { K: "#1c2032", B: "#2e83c5", D: "#394d7a", S: "#f0b06b", H: "#51313d", G: "#ffd271", W: "#f7f2df", R: "#9b4b62" },
+        heroFlash: { K: "#1c2032", B: "#9fc8ff", D: "#6f83b8", S: "#fff", H: "#51313d", G: "#fff4b5", W: "#fff", R: "#ffb3bd" },
+        grunt: { K: "#2b1d2b", M: "#86465d", L: "#ba5c6d", S: "#d67a58", E: "#ffdf82", D: "#4a2a3b" },
+        bat: { K: "#24182f", M: "#70417b", L: "#b9658f", P: "#d783a8", E: "#ffe68a" },
+        shield: { K: "#2b1d2b", M: "#5f486a", L: "#aa6470", S: "#d67a58", E: "#ffdf82", A: "#9fb0c9", B: "#52627e" },
+        obstacle: { K: "#2f333d", R: "#6b6f7e", L: "#969ba8", D: "#444955" },
+        bridge: { K: "#3d2c24", W: "#7b5a38", L: "#c19456", D: "#4d3828" },
+        chest: { K: "#3b2630", W: "#8f563b", G: "#d09a4c", Y: "#f5c452", L: "#ffe28b" },
+        powerup: { K: "#111827", B: "#24334f", C: "#67c7df", W: "#fff8c9" },
+        boss: { K: "#2b1730", M: "#6b2f57", L: "#9b4b62", S: "#d67a58", E: "#ffe28b", H: "#d09a4c", D: "#512d47" }
+      };
+
+      const sprites = {
+        hero: [
+          "....HHHH....",
+          "...HHHHHH...",
+          "....SSSS....",
+          "...SGSSGS...",
+          "..SSSSSSSS..",
+          "..RRBBBBRR..",
+          ".SRBBBBBBRS.",
+          ".S.BBBBBB.S.",
+          "...BBDDBB...",
+          "...DD..DD...",
+          "..DD....DD..",
+          ".KKK....KKK."
+        ],
+        enemy: [
+          "....LLLL....",
+          "...LMMMM...",
+          "..LMMMMMM..",
+          ".MME.M.E.MM.",
+          ".MMMMMMMMMM.",
+          "SMMDMMMMDMMS",
+          "SSMMMMMMMMSS",
+          "..MM....MM..",
+          ".KK......KK."
+        ],
+        flying: [
+          "..LL....LL..",
+          ".LLM....MLL.",
+          "LLMMMKKMMMLL",
+          "..MMMMMMMM..",
+          "...PE..EP...",
+          "....MMMM....",
+          "...K....K..."
+        ],
+        shielded: [
+          "...LLLLL....",
+          "..LMMMMML...",
+          ".MME.MMMMM..",
+          ".MMMMMMAAAA.",
+          "SMMMMMABBAAS",
+          "SSMMM.ABBAAS",
+          "..MM..AAAA..",
+          ".KK....KK..."
+        ],
+        obstacle: [
+          "....L.......",
+          "...LL..L....",
+          "..LRL.LL....",
+          ".LRRLLRL....",
+          "LRRRRRRRL...",
+          "RRRDKRRRRLL.",
+          "RRDDKKRRRRL.",
+          "DDDKKKDDDD.."
+        ],
+        bridge: [
+          "WWWWWWWWWWWWWW",
+          "WLLWLLWLLWLLWW",
+          "WWWWWWWWWWWWWW",
+          ".K..K..K..K...",
+          ".K..K..K..K..."
+        ],
+        chest: [
+          "..GGGGGG..",
+          ".GGGGGGGG.",
+          "GWWWWWWWWG",
+          "WYYYYYYYYW",
+          "WWWWLLWWWW",
+          "WWWWLLWWWW",
+          ".KKKKKKKK."
+        ],
+        powerup: [
+          "..CCCC..",
+          ".CWWWWC.",
+          "CWCCCCWC",
+          "CWCWWCWC",
+          "CWCCCCWC",
+          ".CWWWWC.",
+          "..CCCC.."
+        ],
+        boss: [
+          "....HH....HH....",
+          "...HHHH..HHHH...",
+          "..DDDDDDDDDDDD..",
+          ".DDMMMMMMMMMMDD.",
+          "DMMMMLLLLLLLLMMD",
+          "DMMMLEMMLLMMEMMD",
+          "DMMMMMLLLLLMMMMD",
+          ".MMMLLLLLLLLLMM.",
+          "SSMMLLLLLLLLLMSS",
+          "SSSMMMLLLLMMMSSS",
+          "...MMM....MMM...",
+          "..KKK......KKK.."
+        ]
+      };
+
       const levelThemes = [
         {
           id: "forest",
@@ -1273,6 +1382,21 @@
         ctx.fillRect(Math.round(x), Math.round(y), Math.round(w), Math.round(h));
       }
 
+      function drawPixelSprite(sprite, palette, x, y, scale = 4, options = {}) {
+        ctx.save();
+        ctx.translate(Math.round(x), Math.round(y));
+        if (options.alpha !== undefined) ctx.globalAlpha = options.alpha;
+        for (let row = 0; row < sprite.length; row++) {
+          for (let col = 0; col < sprite[row].length; col++) {
+            const key = sprite[row][col];
+            if (key === ".") continue;
+            ctx.fillStyle = palette[key];
+            ctx.fillRect(col * scale, row * scale, scale, scale);
+          }
+        }
+        ctx.restore();
+      }
+
       function drawBackground(t) {
         const theme = currentTheme();
         const sky = ctx.createLinearGradient(0, 0, 0, canvas.height);
@@ -1322,18 +1446,12 @@
         const x = 118 - knockback;
         const y = 410 - jump + bob;
         const flash = state.hurtClock > 0 && Math.floor(t * 22) % 2 === 0;
-        pixelRect(x + 16, y - 58, 26, 22, flash ? "#fff" : "#f0b06b");
-        pixelRect(x + 20, y - 64, 18, 8, "#51313d");
-        pixelRect(x + 12, y - 36, 34, 34, "#2e83c5");
-        pixelRect(x + 8, y - 28, 10, 26, "#f0b06b");
-        pixelRect(x + 42, y - 30, 10, 24, "#f0b06b");
-        pixelRect(x + 16, y - 2, 10, 28, "#394d7a");
-        pixelRect(x + 34, y - 2, 10, 28, "#394d7a");
-        pixelRect(x + 12, y + 22, 18, 8, "#1c2032");
-        pixelRect(x + 32, y + 22, 18, 8, "#1c2032");
+        drawPixelSprite(sprites.hero, flash ? spritePalettes.heroFlash : spritePalettes.hero, x + 8, y - 66, 4);
         if (state.action === "attack") {
           pixelRect(x + 50, y - 38, 58, 6, "#d8edf2");
           pixelRect(x + 102, y - 42, 10, 14, "#f5c452");
+          pixelRect(x + 62, y - 48, 8, 8, "rgba(255, 226, 139, 0.72)");
+          pixelRect(x + 76, y - 52, 8, 8, "rgba(255, 226, 139, 0.48)");
         }
       }
 
@@ -1345,39 +1463,25 @@
           return;
         }
         if (entity.type === "enemy") {
-          pixelRect(entity.x, entity.y - entity.h, entity.w, entity.h, "#86465d");
-          pixelRect(entity.x + 8, entity.y - entity.h - 12, 28, 16, "#ba5c6d");
-          pixelRect(entity.x + 8, entity.y - 30, 8, 8, "#ffdf82");
-          pixelRect(entity.x + 28, entity.y - 30, 8, 8, "#ffdf82");
-          pixelRect(entity.x - 8, entity.y - 18, 12, 12, "#d67a58");
-          pixelRect(entity.x + 40, entity.y - 18, 12, 12, "#d67a58");
+          const step = Math.floor(performance.now() / 160) % 2;
+          drawPixelSprite(sprites.enemy, spritePalettes.grunt, entity.x - 4, entity.y - 50 + step * 2, 4);
+          pixelRect(entity.x + 8, entity.y - 8, 8, 5, "#2b1d2b");
+          pixelRect(entity.x + 30, entity.y - 8 - step * 2, 8, 5, "#2b1d2b");
         } else if (entity.type === "flying") {
           const dive = Math.max(0, 1 - (entity.x - HERO_HIT_X) / 520);
           const y = entity.y + dive * 86;
-          pixelRect(entity.x + 4, y - entity.h, entity.w - 8, entity.h, "#70417b");
-          pixelRect(entity.x - 10, y - entity.h + 8, 18, 12, "#b9658f");
-          pixelRect(entity.x + 40, y - entity.h + 8, 18, 12, "#b9658f");
-          pixelRect(entity.x + 15, y - entity.h - 8, 18, 10, "#d783a8");
-          pixelRect(entity.x + 16, y - 21, 6, 6, "#ffe68a");
-          pixelRect(entity.x + 28, y - 21, 6, 6, "#ffe68a");
+          const flap = Math.sin(performance.now() / 90) * 4;
+          drawPixelSprite(sprites.flying, spritePalettes.bat, entity.x - 2, y - 44 + flap, 4);
         } else if (entity.type === "shielded") {
-          pixelRect(entity.x, entity.y - entity.h, entity.w, entity.h, "#5f486a");
-          pixelRect(entity.x + 7, entity.y - entity.h - 10, 30, 15, "#aa6470");
-          pixelRect(entity.x + 27, entity.y - 42, 24, 34, "#9fb0c9");
-          pixelRect(entity.x + 31, entity.y - 36, 16, 22, "#52627e");
-          pixelRect(entity.x + 10, entity.y - 27, 7, 7, "#ffdf82");
-          pixelRect(entity.x - 8, entity.y - 18, 12, 12, "#d67a58");
+          drawPixelSprite(sprites.shielded, spritePalettes.shield, entity.x - 4, entity.y - 56, 4);
+          pixelRect(entity.x + 28, entity.y - 44, 18, 28, "rgba(255, 255, 255, 0.12)");
         } else if (entity.type === "bridge") {
-          pixelRect(entity.x, entity.y - entity.h, entity.w, entity.h, "#7b5a38");
-          pixelRect(entity.x + 6, entity.y - entity.h + 5, entity.w - 12, 5, "#c19456");
-          pixelRect(entity.x + 16, entity.y - entity.h, 6, entity.h, "#3d2c24");
-          pixelRect(entity.x + 42, entity.y - entity.h, 6, entity.h, "#3d2c24");
-          pixelRect(entity.x + 66, entity.y - entity.h, 6, entity.h, "#3d2c24");
+          drawPixelSprite(sprites.bridge, spritePalettes.bridge, entity.x, entity.y - 26, 6);
+          pixelRect(entity.x + 18, entity.y - 30, 10, 5, "#f5c452");
+          pixelRect(entity.x + 58, entity.y - 18, 12, 5, "#2f221d");
         } else if (entity.type === "chest") {
-          pixelRect(entity.x, entity.y - entity.h, entity.w, entity.h, "#8f563b");
-          pixelRect(entity.x + 4, entity.y - entity.h - 8, entity.w - 8, 14, "#d09a4c");
-          pixelRect(entity.x + 3, entity.y - 22, entity.w - 6, 5, "#f5c452");
-          pixelRect(entity.x + 19, entity.y - 25, 9, 13, "#ffe28b");
+          drawPixelSprite(sprites.chest, spritePalettes.chest, entity.x + 3, entity.y - 42, 4);
+          pixelRect(entity.x + 8, entity.y - 48, 8, 8, "rgba(255, 226, 139, 0.38)");
         } else if (entity.type === "powerup") {
           const color = {
             time: "#67c7df",
@@ -1385,28 +1489,19 @@
             shield: "#b9c8ff",
             magnet: "#f5c452"
           }[entity.powerup.id];
-          pixelRect(entity.x + 7, entity.y - entity.h - 10, 20, 10, color);
-          pixelRect(entity.x, entity.y - entity.h, entity.w, entity.h, "#24334f");
-          pixelRect(entity.x + 5, entity.y - entity.h + 5, entity.w - 10, entity.h - 10, color);
-          pixelRect(entity.x + 12, entity.y - entity.h + 12, 10, 10, "#fff8c9");
+          const palette = { ...spritePalettes.powerup, C: color };
+          const hover = Math.sin(performance.now() / 140) * 4;
+          drawPixelSprite(sprites.powerup, palette, entity.x + 1, entity.y - 38 + hover, 4);
+          pixelRect(entity.x + 13, entity.y - 48 + hover, 8, 8, color);
         } else if (entity.type === "boss") {
           const pulse = Math.sin(performance.now() / 160) * 4;
-          pixelRect(entity.x + 20, entity.y - entity.h - 18 + pulse, 82, 28, "#512d47");
-          pixelRect(entity.x, entity.y - entity.h, entity.w, entity.h, "#6b2f57");
-          pixelRect(entity.x + 14, entity.y - entity.h + 18, entity.w - 28, 36, "#9b4b62");
-          pixelRect(entity.x + 24, entity.y - entity.h - 34 + pulse, 24, 28, "#d09a4c");
-          pixelRect(entity.x + 74, entity.y - entity.h - 34 - pulse, 24, 28, "#d09a4c");
-          pixelRect(entity.x + 32, entity.y - entity.h + 42, 12, 12, "#ffe28b");
-          pixelRect(entity.x + 78, entity.y - entity.h + 42, 12, 12, "#ffe28b");
-          pixelRect(entity.x - 24, entity.y - entity.h + 62, 28, 16, "#d67a58");
-          pixelRect(entity.x + entity.w - 4, entity.y - entity.h + 62, 28, 16, "#d67a58");
+          drawPixelSprite(sprites.boss, spritePalettes.boss, entity.x - 2, entity.y - entity.h - 24 + pulse, 8);
+          pixelRect(entity.x + 16, entity.y - entity.h + 18, entity.w - 32, 12, "rgba(255, 226, 139, 0.18)");
           const warning = entity.attackClock < 1.4 && Math.floor(performance.now() / 110) % 2 === 0;
           pixelRect(HERO_HIT_X - 18, 258, 36, 174, warning ? "#ff6a61" : "rgba(255, 106, 97, 0.32)");
         } else {
-          pixelRect(entity.x, entity.y - entity.h, entity.w, entity.h, "#6b6f7e");
-          pixelRect(entity.x + 8, entity.y - entity.h - 16, 12, 18, "#969ba8");
-          pixelRect(entity.x + 22, entity.y - entity.h - 10, 10, 12, "#969ba8");
-          pixelRect(entity.x + 6, entity.y - 12, 26, 8, "#444955");
+          drawPixelSprite(sprites.obstacle, spritePalettes.obstacle, entity.x, entity.y - 40, 4);
+          pixelRect(entity.x + 4, entity.y - 8, 28, 6, "#2f333d");
         }
         drawWordBubble(entity);
       }

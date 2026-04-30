@@ -108,7 +108,7 @@
 
 ## Priority 3: Visual And Game Feel
 
-- [ ] Replace simple rectangle sprites with richer pixel art sprites.
+- [x] Replace simple rectangle sprites with richer pixel art sprites.
   - Hero idle/run/jump/attack frames.
   - Enemy walk/hit/death frames.
   - Obstacle variants such as spikes, rocks, pits, logs, and traps.
