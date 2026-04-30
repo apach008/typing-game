@@ -113,7 +113,7 @@
   - Enemy walk/hit/death frames.
   - Obstacle variants such as spikes, rocks, pits, logs, and traps.
 
-- [ ] Add sprite animation frames.
+- [x] Add sprite animation frames.
   - Use small arrays of pixel rects or embedded sprite sheets.
   - Keep assets self-contained in the HTML if the single-file requirement remains.
 

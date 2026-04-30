@@ -525,6 +525,193 @@
         ]
       };
 
+      const spriteAnimations = {
+        hero: {
+          run: [
+            sprites.hero,
+            [
+              "....HHHH....",
+              "...HHHHHH...",
+              "....SSSS....",
+              "...SGSSGS...",
+              "..SSSSSSSS..",
+              "..RRBBBBRR..",
+              ".SRBBBBBBRS.",
+              ".S.BBBBBB.S.",
+              "...BBDDBB...",
+              "..DD....DD..",
+              "...DD..DD...",
+              "...KKKKKK..."
+            ]
+          ],
+          jump: [
+            [
+              "....HHHH....",
+              "...HHHHHH...",
+              "....SSSS....",
+              "...SGSSGS...",
+              "..SSSSSSSS..",
+              "..RRBBBBRR..",
+              "SSRBBBBBBRSS",
+              "...BBBBBB...",
+              "...BBDDBB...",
+              "..DD....DD..",
+              ".KK......KK.",
+              "............"
+            ]
+          ],
+          attack: [
+            [
+              "....HHHH....",
+              "...HHHHHH...",
+              "....SSSS....",
+              "...SGSSGS...",
+              "..SSSSSSSS..",
+              "..RRBBBBRRS.",
+              ".SRBBBBBB.S.",
+              ".S.BBBBBB...",
+              "...BBDDBB...",
+              "...DD..DD...",
+              "..DD....DD..",
+              ".KKK....KKK."
+            ],
+            [
+              "....HHHH....",
+              "...HHHHHH...",
+              "....SSSS....",
+              "...SGSSGS...",
+              "..SSSSSSSSS.",
+              "..RRBBBBRRSS",
+              ".SRBBBBBB...",
+              ".S.BBBBBB...",
+              "...BBDDBB...",
+              "..DD....DD..",
+              "...DD..DD...",
+              "...KKKKKK..."
+            ]
+          ],
+          hurt: [
+            [
+              "....HHHH....",
+              "...HHHHHH...",
+              "....SSSS....",
+              "...SGSSGS...",
+              "..SSSSSSSS..",
+              ".RRBBBBRR...",
+              "SRBBBBBBRS..",
+              "S.BBBBBB.S..",
+              "..BBDDBB....",
+              "..DD..DD....",
+              ".DD....DD...",
+              "KKK....KKK.."
+            ]
+          ]
+        },
+        enemy: [
+          sprites.enemy,
+          [
+            "....LLLL....",
+            "...LMMMM...",
+            "..LMMMMMM..",
+            ".MME.M.E.MM.",
+            ".MMMMMMMMMM.",
+            "SMMDMMMMDMMS",
+            "SSMMMMMMMMSS",
+            ".MM......MM.",
+            "..KK....KK.."
+          ]
+        ],
+        flying: [
+          sprites.flying,
+          [
+            "............",
+            ".LLL....LLL.",
+            "LLMMKKKKMMLL",
+            "..LMMMMMML..",
+            "...PE..EP...",
+            "...MMMMMM...",
+            "..K......K.."
+          ]
+        ],
+        shielded: [
+          sprites.shielded,
+          [
+            "...LLLLL....",
+            "..LMMMMML...",
+            ".MME.MMMMM..",
+            ".MMMMMMAAAA.",
+            "SMMMMMABBAAS",
+            ".SMMM.ABBAA.",
+            ".MM....AAAA.",
+            "..KK..KK...."
+          ]
+        ],
+        bridge: [
+          sprites.bridge,
+          [
+            "WWWWWWWWWWWWWW",
+            "WLLWLLWLLWLLWW",
+            "WWWWWWWWWWWWWW",
+            ".K...K..K..K..",
+            "..K..K...K..K."
+          ]
+        ],
+        chest: [
+          sprites.chest,
+          [
+            "..GGGGGG..",
+            ".GGGGGGGG.",
+            "GWWWWWWWWG",
+            "WYYYYYYYYW",
+            "WWWWLLWWWW",
+            "WWWWLLWWWW",
+            "..KKKKKK.."
+          ]
+        ],
+        powerup: [
+          sprites.powerup,
+          [
+            "...CC...",
+            "..CWWC..",
+            ".CWCCWC.",
+            "CWCCCCWC",
+            ".CWCCWC.",
+            "..CWWC..",
+            "...CC..."
+          ]
+        ],
+        boss: [
+          sprites.boss,
+          [
+            "....HH....HH....",
+            "...HHHH..HHHH...",
+            "..DDDDDDDDDDDD..",
+            ".DDMMMMMMMMMMDD.",
+            "DMMMMLLLLLLLLMMD",
+            "DMMMLEMMLLMMEMMD",
+            "DMMMMMLLLLLMMMMD",
+            ".MMMLLLLLLLLLMM.",
+            ".SSMMLLLLLLLMMSS",
+            "SSSMMMLLLLMMMSSS",
+            "..MMM......MMM..",
+            ".KKK........KKK."
+          ]
+        ],
+        obstacle: [
+          sprites.obstacle,
+          [
+            "....L.......",
+            "...LL..L....",
+            "..LRL.LL....",
+            ".LRRLLRL....",
+            "LRRRRRRRL...",
+            "RRRDKRRRRLL.",
+            "RRDDKKRRRRL.",
+            ".DDKKKDDDD.."
+          ]
+        ]
+      };
+
       const levelThemes = [
         {
           id: "forest",
@@ -1397,6 +1584,10 @@
         ctx.restore();
       }
 
+      function animationFrame(frames, t, fps = 7, offset = 0) {
+        return frames[Math.floor((t * fps + offset) % frames.length)];
+      }
+
       function drawBackground(t) {
         const theme = currentTheme();
         const sky = ctx.createLinearGradient(0, 0, 0, canvas.height);
@@ -1446,7 +1637,9 @@
         const x = 118 - knockback;
         const y = 410 - jump + bob;
         const flash = state.hurtClock > 0 && Math.floor(t * 22) % 2 === 0;
-        drawPixelSprite(sprites.hero, flash ? spritePalettes.heroFlash : spritePalettes.hero, x + 8, y - 66, 4);
+        const frames = spriteAnimations.hero[state.action] || spriteAnimations.hero.run;
+        const frame = animationFrame(frames, t, state.action === "run" ? 8 : 12);
+        drawPixelSprite(frame, flash ? spritePalettes.heroFlash : spritePalettes.hero, x + 8, y - 66, 4);
         if (state.action === "attack") {
           pixelRect(x + 50, y - 38, 58, 6, "#d8edf2");
           pixelRect(x + 102, y - 42, 10, 14, "#f5c452");
@@ -1455,7 +1648,7 @@
         }
       }
 
-      function drawEntity(entity) {
+      function drawEntity(entity, t) {
         if (entity.done) {
           ctx.globalAlpha = Math.max(0, entity.pop / 0.35);
           pixelRect(entity.x - 8, entity.y - 52, 72, 22, entity.optional ? "#8ff0ff" : "#f5c452");
@@ -1463,24 +1656,24 @@
           return;
         }
         if (entity.type === "enemy") {
-          const step = Math.floor(performance.now() / 160) % 2;
-          drawPixelSprite(sprites.enemy, spritePalettes.grunt, entity.x - 4, entity.y - 50 + step * 2, 4);
+          const step = Math.floor(t * 7 + entity.id) % 2;
+          drawPixelSprite(animationFrame(spriteAnimations.enemy, t, 7, entity.id), spritePalettes.grunt, entity.x - 4, entity.y - 50 + step * 2, 4);
           pixelRect(entity.x + 8, entity.y - 8, 8, 5, "#2b1d2b");
           pixelRect(entity.x + 30, entity.y - 8 - step * 2, 8, 5, "#2b1d2b");
         } else if (entity.type === "flying") {
           const dive = Math.max(0, 1 - (entity.x - HERO_HIT_X) / 520);
           const y = entity.y + dive * 86;
-          const flap = Math.sin(performance.now() / 90) * 4;
-          drawPixelSprite(sprites.flying, spritePalettes.bat, entity.x - 2, y - 44 + flap, 4);
+          const flap = Math.sin(t * 16 + entity.id) * 4;
+          drawPixelSprite(animationFrame(spriteAnimations.flying, t, 10, entity.id), spritePalettes.bat, entity.x - 2, y - 44 + flap, 4);
         } else if (entity.type === "shielded") {
-          drawPixelSprite(sprites.shielded, spritePalettes.shield, entity.x - 4, entity.y - 56, 4);
+          drawPixelSprite(animationFrame(spriteAnimations.shielded, t, 5, entity.id), spritePalettes.shield, entity.x - 4, entity.y - 56, 4);
           pixelRect(entity.x + 28, entity.y - 44, 18, 28, "rgba(255, 255, 255, 0.12)");
         } else if (entity.type === "bridge") {
-          drawPixelSprite(sprites.bridge, spritePalettes.bridge, entity.x, entity.y - 26, 6);
+          drawPixelSprite(animationFrame(spriteAnimations.bridge, t, 3, entity.id), spritePalettes.bridge, entity.x, entity.y - 26, 6);
           pixelRect(entity.x + 18, entity.y - 30, 10, 5, "#f5c452");
           pixelRect(entity.x + 58, entity.y - 18, 12, 5, "#2f221d");
         } else if (entity.type === "chest") {
-          drawPixelSprite(sprites.chest, spritePalettes.chest, entity.x + 3, entity.y - 42, 4);
+          drawPixelSprite(animationFrame(spriteAnimations.chest, t, 4, entity.id), spritePalettes.chest, entity.x + 3, entity.y - 42, 4);
           pixelRect(entity.x + 8, entity.y - 48, 8, 8, "rgba(255, 226, 139, 0.38)");
         } else if (entity.type === "powerup") {
           const color = {
@@ -1490,17 +1683,17 @@
             magnet: "#f5c452"
           }[entity.powerup.id];
           const palette = { ...spritePalettes.powerup, C: color };
-          const hover = Math.sin(performance.now() / 140) * 4;
-          drawPixelSprite(sprites.powerup, palette, entity.x + 1, entity.y - 38 + hover, 4);
+          const hover = Math.sin(t * 7 + entity.id) * 4;
+          drawPixelSprite(animationFrame(spriteAnimations.powerup, t, 8, entity.id), palette, entity.x + 1, entity.y - 38 + hover, 4);
           pixelRect(entity.x + 13, entity.y - 48 + hover, 8, 8, color);
         } else if (entity.type === "boss") {
-          const pulse = Math.sin(performance.now() / 160) * 4;
-          drawPixelSprite(sprites.boss, spritePalettes.boss, entity.x - 2, entity.y - entity.h - 24 + pulse, 8);
+          const pulse = Math.sin(t * 6 + entity.id) * 4;
+          drawPixelSprite(animationFrame(spriteAnimations.boss, t, 4, entity.id), spritePalettes.boss, entity.x - 2, entity.y - entity.h - 24 + pulse, 8);
           pixelRect(entity.x + 16, entity.y - entity.h + 18, entity.w - 32, 12, "rgba(255, 226, 139, 0.18)");
-          const warning = entity.attackClock < 1.4 && Math.floor(performance.now() / 110) % 2 === 0;
+          const warning = entity.attackClock < 1.4 && Math.floor(t * 9) % 2 === 0;
           pixelRect(HERO_HIT_X - 18, 258, 36, 174, warning ? "#ff6a61" : "rgba(255, 106, 97, 0.32)");
         } else {
-          drawPixelSprite(sprites.obstacle, spritePalettes.obstacle, entity.x, entity.y - 40, 4);
+          drawPixelSprite(animationFrame(spriteAnimations.obstacle, t, 4, entity.id), spritePalettes.obstacle, entity.x, entity.y - 40, 4);
           pixelRect(entity.x + 4, entity.y - 8, 28, 6, "#2f333d");
         }
         drawWordBubble(entity);
@@ -1569,7 +1762,7 @@
       function draw() {
         const t = performance.now() / 1000;
         drawBackground(t);
-        for (const entity of state.entities) drawEntity(entity);
+        for (const entity of state.entities) drawEntity(entity, t);
         drawHero(t);
         drawBossHealth();
         if (state.mode === "playing" && state.countdown > 0) {
