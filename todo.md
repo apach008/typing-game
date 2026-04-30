@@ -39,7 +39,7 @@ To do, ordered by impact (highest first):
   - Reachable from start screen and pause menu.
   - Becomes valuable once the persistence and audio items above are in place.
 
-- [ ] Add a targeted drill mode.
+- [x] Add a targeted drill mode.
   - Player picks (or auto-suggests from their lifetime mistake heatmap) a letter or bigram, and the next run filters words containing it.
   - Single highest-value mode for players who actually want to fix specific weaknesses.
 

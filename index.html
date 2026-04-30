@@ -138,6 +138,7 @@
     .difficulty,
     .run-modes,
     .typing-modes,
+    .drill-suggestions,
     .settings-options {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
@@ -268,6 +269,68 @@
       display: grid;
       gap: 8px;
       margin-top: 18px;
+    }
+
+    .drill-panel {
+      margin: 16px 0;
+      border: 1px solid #404d70;
+      background: #10172a;
+      padding: 12px;
+      text-align: left;
+    }
+
+    .drill-panel h2 {
+      margin: 0 0 8px;
+      color: #ffe28b;
+      font-size: 18px;
+      line-height: 1.1;
+      text-shadow: none;
+    }
+
+    .drill-panel p {
+      margin: 0;
+      color: #ddd5b5;
+      font-size: 14px;
+      line-height: 1.35;
+    }
+
+    .drill-suggestions {
+      margin: 10px 0;
+    }
+
+    .drill-suggestions button {
+      min-width: 0;
+      padding: 10px 6px;
+      text-transform: uppercase;
+    }
+
+    .drill-custom {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .drill-custom input {
+      min-width: 0;
+      border: 1px solid #65739d;
+      background: #151d31;
+      color: var(--ink);
+      font: inherit;
+      font-weight: 800;
+      padding: 11px 10px;
+      text-transform: lowercase;
+    }
+
+    .drill-custom input:focus-visible {
+      outline: 2px solid #f5c452;
+      outline-offset: 2px;
+    }
+
+    .drill-status {
+      color: var(--muted);
+      font-size: 12px;
+      text-transform: uppercase;
     }
 
     #pauseScreen button {
@@ -517,11 +580,16 @@
       .difficulty,
       .run-modes,
       .typing-modes,
+      .drill-suggestions,
       .settings-options,
       .best-grid,
       .onboarding-grid,
       .lifetime-grid,
       .final-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .drill-custom {
         grid-template-columns: 1fr;
       }
     }
@@ -563,6 +631,15 @@
             <button data-typing-mode="advanced">Advanced</button>
             <button data-typing-mode="expert">Expert</button>
           </div>
+          <section class="drill-panel" aria-labelledby="drillTitle">
+            <h2 id="drillTitle">Target Drill</h2>
+            <p>Filter the next run to words containing a weak letter or custom bigram.</p>
+            <div class="drill-suggestions" id="drillSuggestions" role="group" aria-label="Target drill suggestions"></div>
+            <div class="drill-custom">
+              <input id="drillInput" type="text" inputmode="text" maxlength="2" autocomplete="off" spellcheck="false" aria-label="Custom drill letter or bigram" placeholder="letter or bigram">
+              <span class="drill-status" id="drillStatus">Drill off</span>
+            </div>
+          </section>
           <section class="best-panel" aria-labelledby="personalBestsTitle">
             <h2 id="personalBestsTitle">Easy Personal Bests</h2>
             <div class="best-grid">
@@ -754,6 +831,9 @@
         lifetimeTime: document.getElementById("lifetimeTime"),
         lifetimeWeakLetters: document.getElementById("lifetimeWeakLetters"),
         lifetimeHeatmap: document.getElementById("lifetimeHeatmap"),
+        drillSuggestions: document.getElementById("drillSuggestions"),
+        drillInput: document.getElementById("drillInput"),
+        drillStatus: document.getElementById("drillStatus"),
         newBestBanner: document.getElementById("newBestBanner"),
         gameOverText: document.getElementById("gameOverText"),
         startSettingsButton: document.getElementById("startSettingsButton"),
@@ -1359,6 +1439,7 @@
           runMode: "endless",
           difficulty: defaultDifficulty,
           typingMode: defaultTypingMode,
+          drillTarget: "",
           seed: 0,
           rngState: 0,
           elapsed: 0,
@@ -1569,6 +1650,42 @@
         els.lifetimeTime.textContent = formatDuration(stats.secondsTyped);
         els.lifetimeWeakLetters.textContent = weakLetters.length ? weakLetters.join(", ") : "None";
         renderLifetimeHeatmap(stats.letterMistakes);
+        updateDrillSuggestions(stats);
+      }
+
+      function normalizeDrillTarget(value) {
+        return value.toLowerCase().replace(/[^a-z]/g, "").slice(0, 2);
+      }
+
+      function updateDrillStatus() {
+        els.drillStatus.textContent = state.drillTarget ? `Drilling ${state.drillTarget.toUpperCase()}` : "Drill off";
+      }
+
+      function updateDrillButtons() {
+        document.querySelectorAll("[data-drill-target]").forEach(button => {
+          const isActive = button.dataset.drillTarget === state.drillTarget;
+          button.classList.toggle("active", isActive);
+          button.setAttribute("aria-pressed", String(isActive));
+        });
+      }
+
+      function updateDrillSuggestions(stats = readLifetimeStats()) {
+        const weakLetters = topMistakeLetters(stats.letterMistakes);
+        const suggestionButtons = weakLetters.map(letter => (
+          `<button type="button" data-drill-target="${letter}" aria-pressed="false">${letter}</button>`
+        ));
+        els.drillSuggestions.innerHTML = [
+          `<button type="button" data-drill-target="" aria-pressed="false">Off</button>`,
+          ...suggestionButtons
+        ].join("");
+        updateDrillButtons();
+      }
+
+      function setDrillTarget(target, syncInput = true) {
+        state.drillTarget = normalizeDrillTarget(target);
+        if (syncInput) els.drillInput.value = state.drillTarget;
+        updateDrillStatus();
+        updateDrillButtons();
       }
 
       function recordLifetimeStats() {
@@ -1838,7 +1955,12 @@
         const range = adaptiveWordRange();
         const basePool = wordPools[state.difficulty] || wordPools.normal;
         const pool = basePool.filter(word => word.length >= range.min && word.length <= range.max);
-        const eligibleWords = pool.length ? pool : basePool;
+        const lengthEligibleWords = pool.length ? pool : basePool;
+        const drillTarget = normalizeDrillTarget(state.drillTarget);
+        const drillEligibleWords = drillTarget
+          ? lengthEligibleWords.filter(word => word.toLowerCase().includes(drillTarget))
+          : [];
+        const eligibleWords = drillEligibleWords.length ? drillEligibleWords : lengthEligibleWords;
         return formatWordForTypingMode(eligibleWords[Math.floor(random() * eligibleWords.length)]);
       }
 
@@ -2093,10 +2215,12 @@
         const selectedDifficulty = state.difficulty;
         const selectedRunMode = state.runMode;
         const selectedTypingMode = state.typingMode;
+        const selectedDrillTarget = state.drillTarget;
         state = makeState();
         state.difficulty = selectedDifficulty;
         state.runMode = selectedRunMode;
         state.typingMode = selectedTypingMode;
+        state.drillTarget = selectedDrillTarget;
         state.seed = runModes[state.runMode].daily ? dailySeed() : Math.floor(Math.random() * 0xffffffff);
         state.rngState = state.seed;
         state.mode = "playing";
@@ -3171,6 +3295,18 @@
 
       document.querySelectorAll("[data-typing-mode]").forEach(button => {
         button.addEventListener("click", () => setTypingMode(button.dataset.typingMode));
+      });
+
+      els.drillSuggestions.addEventListener("click", event => {
+        const button = event.target.closest("[data-drill-target]");
+        if (!button) return;
+        setDrillTarget(button.dataset.drillTarget);
+      });
+
+      els.drillInput.addEventListener("input", () => {
+        const normalized = normalizeDrillTarget(els.drillInput.value);
+        if (els.drillInput.value !== normalized) els.drillInput.value = normalized;
+        setDrillTarget(normalized, false);
       });
 
       document.getElementById("startButton").addEventListener("click", startGame);
