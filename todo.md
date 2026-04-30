@@ -28,7 +28,7 @@
 
 ## Priority 1: Core Gameplay
 
-- [ ] Add health instead of instant death.
+- [x] Add health instead of instant death.
   - Give the player 3 hearts.
   - Missing a word costs a heart, knocks the hero back, and clears the current typed input.
   - Instant death can remain an optional Hardcore mode.

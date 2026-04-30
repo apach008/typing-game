@@ -50,7 +50,7 @@
 
     .hud {
       display: grid;
-      grid-template-columns: repeat(6, minmax(86px, 1fr));
+      grid-template-columns: repeat(7, minmax(76px, 1fr));
       gap: 1px;
       background: #26304f;
       border-bottom: 1px solid #3d496d;
@@ -265,6 +265,7 @@
       <div class="stat"><span>Timer</span><strong id="timer">90</strong></div>
       <div class="stat"><span>Score</span><strong id="score">0</strong></div>
       <div class="stat"><span>Level</span><strong id="level">1</strong></div>
+      <div class="stat"><span>Hearts</span><strong id="hearts">3</strong></div>
     </section>
 
     <section class="stage">
@@ -311,6 +312,7 @@
         timer: document.getElementById("timer"),
         score: document.getElementById("score"),
         level: document.getElementById("level"),
+        hearts: document.getElementById("hearts"),
         typebar: document.getElementById("typebar"),
         startScreen: document.getElementById("startScreen"),
         gameOverScreen: document.getElementById("gameOverScreen"),
@@ -335,6 +337,7 @@
       ];
 
       const COUNTDOWN_SECONDS = 3;
+      const STARTING_HEARTS = 3;
       const WARMUP_SECONDS = 10;
       const WARMUP_START_SPEED_FACTOR = 0.72;
       const WARMUP_START_SPAWN_FACTOR = 1.55;
@@ -369,6 +372,7 @@
           streak: 0,
           bestStreak: 0,
           score: 0,
+          hearts: STARTING_HEARTS,
           level: 1,
           action: "run",
           actionClock: 0,
@@ -509,6 +513,23 @@
         beep("hit");
       }
 
+      function missTarget(target) {
+        target.done = true;
+        target.pop = 0;
+        state.hearts -= 1;
+        state.streak = 0;
+        state.typed = "";
+        state.action = "hurt";
+        state.actionClock = 0.36;
+        state.hurtClock = 0.5;
+
+        if (state.hearts <= 0) {
+          endGame(`No hearts left. The word "${target.word}" reached the hero.`);
+        } else {
+          beep("hit");
+        }
+      }
+
       function handleKey(event) {
         if (event.key === "Enter" && state.mode !== "playing") {
           startGame();
@@ -553,6 +574,7 @@
         els.timer.textContent = Math.max(0, Math.ceil(state.timeLeft));
         els.score.textContent = state.score;
         els.level.textContent = state.level;
+        els.hearts.textContent = `${Math.max(0, state.hearts)}/${STARTING_HEARTS}`;
 
         if (state.mode === "playing" && state.countdown > 0) {
           els.typebar.textContent = `Get ready... ${Math.ceil(state.countdown)}`;
@@ -602,7 +624,7 @@
 
         const danger = currentTarget();
         if (danger && danger.x < HERO_HIT_X && !danger.done) {
-          endGame(`The word "${danger.word}" reached the hero.`);
+          missTarget(danger);
         } else if (state.timeLeft <= 0) {
           endGame("Time ran out on the road.");
         }
@@ -649,7 +671,8 @@
       function drawHero(t) {
         const bob = Math.sin(t * 12) * 3;
         const jump = state.action === "jump" ? Math.sin((state.actionClock / 0.45) * Math.PI) * 78 : 0;
-        const x = 118;
+        const knockback = state.action === "hurt" ? Math.sin((state.actionClock / 0.36) * Math.PI) * 34 : 0;
+        const x = 118 - knockback;
         const y = 410 - jump + bob;
         const flash = state.hurtClock > 0 && Math.floor(t * 22) % 2 === 0;
         pixelRect(x + 16, y - 58, 26, 22, flash ? "#fff" : "#f0b06b");
