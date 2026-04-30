@@ -447,7 +447,7 @@
 
     .lifetime-grid {
       display: grid;
-      grid-template-columns: repeat(4, 1fr);
+      grid-template-columns: repeat(5, 1fr);
       gap: 6px;
     }
 
@@ -745,6 +745,7 @@
               <div class="lifetime-stat"><span>Words</span><strong id="lifetimeWords">0</strong></div>
               <div class="lifetime-stat"><span>Time</span><strong id="lifetimeTime">0s</strong></div>
               <div class="lifetime-stat"><span>Weak Letters</span><strong id="lifetimeWeakLetters">None</strong></div>
+              <div class="lifetime-stat"><span>Weak Bigrams</span><strong id="lifetimeWeakBigrams">None</strong></div>
             </div>
             <div class="letter-heatmap" id="lifetimeHeatmap" aria-label="Lifetime letter mistake heatmap"></div>
           </section>
@@ -854,6 +855,7 @@
             <div class="final-stat"><span>Longest Streak</span><strong id="finalLongestStreak">0</strong></div>
             <div class="final-stat"><span>Avg Reaction</span><strong id="finalReactionTime">0.00s</strong></div>
             <div class="final-stat final-stat-wide"><span>Needs Work</span><strong id="finalWeakLetters">None</strong></div>
+            <div class="final-stat final-stat-wide"><span>Weak Bigrams</span><strong id="finalWeakBigrams">None</strong></div>
             <div class="final-stat final-stat-wide final-stat-chart" id="finalChartWrap" hidden>
               <span>Pace Over Time</span>
               <div class="final-chart-legend">
@@ -917,6 +919,7 @@
         finalLongestStreak: document.getElementById("finalLongestStreak"),
         finalReactionTime: document.getElementById("finalReactionTime"),
         finalWeakLetters: document.getElementById("finalWeakLetters"),
+        finalWeakBigrams: document.getElementById("finalWeakBigrams"),
         finalChartWrap: document.getElementById("finalChartWrap"),
         finalChart: document.getElementById("finalChart"),
         personalBestsTitle: document.getElementById("personalBestsTitle"),
@@ -929,6 +932,7 @@
         lifetimeWords: document.getElementById("lifetimeWords"),
         lifetimeTime: document.getElementById("lifetimeTime"),
         lifetimeWeakLetters: document.getElementById("lifetimeWeakLetters"),
+        lifetimeWeakBigrams: document.getElementById("lifetimeWeakBigrams"),
         lifetimeHeatmap: document.getElementById("lifetimeHeatmap"),
         drillSuggestions: document.getElementById("drillSuggestions"),
         drillInput: document.getElementById("drillInput"),
@@ -1563,6 +1567,8 @@
           adaptiveCompleted: 0,
           adaptiveMisses: 0,
           letterMistakes: {},
+          letterMistakeBigrams: {},
+          letterMistakeTrigrams: {},
           samples: [],
           sampleClock: 0,
           completedChars: 0,
@@ -1617,7 +1623,9 @@
           runs: 0,
           wordsTyped: 0,
           secondsTyped: 0,
-          letterMistakes: {}
+          letterMistakes: {},
+          letterMistakeBigrams: {},
+          letterMistakeTrigrams: {}
         };
       }
 
@@ -1698,7 +1706,9 @@
             runs: Number.isFinite(parsed.runs) ? parsed.runs : 0,
             wordsTyped: Number.isFinite(parsed.wordsTyped) ? parsed.wordsTyped : 0,
             secondsTyped: Number.isFinite(parsed.secondsTyped) ? parsed.secondsTyped : 0,
-            letterMistakes: parsed.letterMistakes && typeof parsed.letterMistakes === "object" ? parsed.letterMistakes : {}
+            letterMistakes: parsed.letterMistakes && typeof parsed.letterMistakes === "object" ? parsed.letterMistakes : {},
+            letterMistakeBigrams: parsed.letterMistakeBigrams && typeof parsed.letterMistakeBigrams === "object" ? parsed.letterMistakeBigrams : {},
+            letterMistakeTrigrams: parsed.letterMistakeTrigrams && typeof parsed.letterMistakeTrigrams === "object" ? parsed.letterMistakeTrigrams : {}
           };
         } catch (error) {
           return emptyLifetimeStats();
@@ -1720,6 +1730,15 @@
           .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
           .slice(0, 3)
           .map(([letter]) => letter);
+      }
+
+      function topMistakeNgrams(ngramMistakes, n, limit = 3) {
+        const pattern = new RegExp(`^[a-z]{${n}}$`);
+        return Object.entries(ngramMistakes || {})
+          .filter(([ngram, count]) => pattern.test(ngram) && count > 0)
+          .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+          .slice(0, limit)
+          .map(([ngram]) => ngram);
       }
 
       function formatDuration(seconds) {
@@ -1746,10 +1765,12 @@
       function updateLifetimeStatsDisplay() {
         const stats = readLifetimeStats();
         const weakLetters = topMistakeLetters(stats.letterMistakes);
+        const weakBigrams = topMistakeNgrams(stats.letterMistakeBigrams, 2);
         els.lifetimeRuns.textContent = stats.runs;
         els.lifetimeWords.textContent = stats.wordsTyped;
         els.lifetimeTime.textContent = formatDuration(stats.secondsTyped);
         els.lifetimeWeakLetters.textContent = weakLetters.length ? weakLetters.join(", ") : "None";
+        els.lifetimeWeakBigrams.textContent = weakBigrams.length ? weakBigrams.join(", ") : "None";
         renderLifetimeHeatmap(stats.letterMistakes);
         updateDrillSuggestions(stats);
       }
@@ -1772,12 +1793,17 @@
 
       function updateDrillSuggestions(stats = readLifetimeStats()) {
         const weakLetters = topMistakeLetters(stats.letterMistakes);
-        const suggestionButtons = weakLetters.map(letter => (
+        const weakBigrams = topMistakeNgrams(stats.letterMistakeBigrams, 2);
+        const letterButtons = weakLetters.map(letter => (
           `<button type="button" data-drill-target="${letter}" aria-pressed="false">${letter}</button>`
+        ));
+        const bigramButtons = weakBigrams.map(bigram => (
+          `<button type="button" data-drill-target="${bigram}" aria-pressed="false">${bigram}</button>`
         ));
         els.drillSuggestions.innerHTML = [
           `<button type="button" data-drill-target="" aria-pressed="false">Off</button>`,
-          ...suggestionButtons
+          ...letterButtons,
+          ...bigramButtons
         ].join("");
         updateDrillButtons();
       }
@@ -1796,12 +1822,24 @@
           runs: stats.runs + 1,
           wordsTyped: stats.wordsTyped + state.completedWords,
           secondsTyped: stats.secondsTyped + state.elapsed,
-          letterMistakes: { ...stats.letterMistakes }
+          letterMistakes: { ...stats.letterMistakes },
+          letterMistakeBigrams: { ...stats.letterMistakeBigrams },
+          letterMistakeTrigrams: { ...stats.letterMistakeTrigrams }
         };
 
         Object.entries(state.letterMistakes).forEach(([letter, count]) => {
           if (!/^[a-z]$/.test(letter) || count <= 0) return;
           next.letterMistakes[letter] = (next.letterMistakes[letter] || 0) + count;
+        });
+
+        Object.entries(state.letterMistakeBigrams).forEach(([bigram, count]) => {
+          if (!/^[a-z]{2}$/.test(bigram) || count <= 0) return;
+          next.letterMistakeBigrams[bigram] = (next.letterMistakeBigrams[bigram] || 0) + count;
+        });
+
+        Object.entries(state.letterMistakeTrigrams).forEach(([trigram, count]) => {
+          if (!/^[a-z]{3}$/.test(trigram) || count <= 0) return;
+          next.letterMistakeTrigrams[trigram] = (next.letterMistakeTrigrams[trigram] || 0) + count;
         });
 
         writeLifetimeStats(next);
@@ -2355,6 +2393,7 @@
         const finalMistypedKeys = currentMistypedKeys();
         const finalAverageReactionTime = currentAverageReactionTime();
         const finalWeakLetters = weakestLettersSummary();
+        const finalWeakBigrams = weakestBigramsSummary();
         const last = state.samples[state.samples.length - 1];
         if (state.elapsed > 0 && (!last || state.elapsed - last.t > 0.05)) {
           state.samples.push({ t: state.elapsed, netWpm: finalNetWpm, accuracy: finalAccuracy });
@@ -2381,6 +2420,7 @@
         els.finalLongestStreak.textContent = state.bestStreak;
         els.finalReactionTime.textContent = `${finalAverageReactionTime}s`;
         els.finalWeakLetters.textContent = finalWeakLetters;
+        els.finalWeakBigrams.textContent = finalWeakBigrams;
         drawFinalChart(state.samples);
         els.newBestBanner.hidden = !improvedBests.length;
         els.newBestBanner.textContent = improvedBests.length ? `New Best! ${improvedBests.join(", ")}` : "New Best!";
@@ -2524,14 +2564,32 @@
         return letter === " " ? "space" : letter;
       }
 
-      function recordLetterMistake(letter) {
-        if (!/^[a-z]$/i.test(letter)) return;
-        const normalized = letter.toLowerCase();
+      function recordLetterMistake(target) {
+        const expected = expectedLetter(target);
+        if (!/^[a-z]$/i.test(expected)) return;
+        const normalized = expected.toLowerCase();
         state.letterMistakes[normalized] = (state.letterMistakes[normalized] || 0) + 1;
+
+        const typed = state.typed;
+        const prev1 = typed.length >= 1 ? typed[typed.length - 1].toLowerCase() : "";
+        const prev2 = typed.length >= 2 ? typed[typed.length - 2].toLowerCase() : "";
+        if (/^[a-z]$/.test(prev1)) {
+          const bigram = prev1 + normalized;
+          state.letterMistakeBigrams[bigram] = (state.letterMistakeBigrams[bigram] || 0) + 1;
+          if (/^[a-z]$/.test(prev2)) {
+            const trigram = prev2 + bigram;
+            state.letterMistakeTrigrams[trigram] = (state.letterMistakeTrigrams[trigram] || 0) + 1;
+          }
+        }
       }
 
       function weakestLettersSummary() {
         const weakest = topMistakeLetters(state.letterMistakes);
+        return weakest.length ? weakest.join(", ") : "None";
+      }
+
+      function weakestBigramsSummary() {
+        const weakest = topMistakeNgrams(state.letterMistakeBigrams, 2);
         return weakest.length ? weakest.join(", ") : "None";
       }
 
@@ -2652,7 +2710,7 @@
           beep("key");
           if (state.typed === target.word) completeTarget(target);
         } else {
-          recordLetterMistake(expectedLetter(target));
+          recordLetterMistake(target);
           failKey(target);
         }
       }

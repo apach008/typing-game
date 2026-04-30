@@ -12,7 +12,7 @@ To do, ordered by impact (highest first):
   - Highlight the best WPM peak and lowest accuracy dip so players can see *where* they fell apart, not just the average.
   - This is the single most-cited reason serious typists stick with Monkeytype/keybr — summary numbers alone don't teach.
 
-- [ ] Track bigram and trigram weaknesses, not only single letters.
+- [x] Track bigram and trigram weaknesses, not only single letters.
   - When a typo lands on letter X and the previous correct letter was Y, increment a `letterMistakes["yx"]` (and trigram) counter alongside the existing single-letter tracking.
   - Surface the top weak bigrams in lifetime stats and drill suggestions next to the letter list.
   - Most typing pain lives at the bigram level (th, ing, qu, ed); single-letter tracking misses it entirely.
