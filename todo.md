@@ -44,7 +44,7 @@ To do, ordered by impact (highest first):
   - Dying on level 4 currently forces a restart from 1, which is the main reason players abandon Adventure.
   - Cheapest version: on game over in Adventure with at least one boss defeated, offer "Continue from Level N" for a score penalty (e.g. -50%).
 
-- [ ] Add achievement / milestone toasts.
+- [x] Add achievement / milestone toasts.
   - First 60 WPM, first 50-streak, first boss kill, first daily streak of 7, first Hard run cleared, first PB beaten this week, etc.
   - Surface as an unobtrusive corner toast during play and a checklist on the start screen.
   - Cheap to implement, very high engagement leverage; gives early players a reason to come back tomorrow.
