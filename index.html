@@ -193,6 +193,32 @@
       color: #fff3c4;
     }
 
+    .sound-theme {
+      display: grid;
+      gap: 6px;
+      margin-top: 8px;
+    }
+
+    .sound-theme-label {
+      color: var(--muted);
+      font-size: 0.72rem;
+      text-align: left;
+      text-transform: uppercase;
+    }
+
+    .sound-theme-options {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 6px;
+    }
+
+    .sound-theme-options button {
+      width: 100%;
+      margin-top: 0;
+      padding: 8px 6px;
+      font-size: 0.72rem;
+    }
+
     .how-to-play-link {
       width: max-content;
       justify-self: center;
@@ -520,6 +546,14 @@
           <div class="menu-actions">
             <button class="primary" id="startButton">Start Run</button>
             <button class="sound-toggle" id="startMuteButton" type="button" aria-pressed="false">Sound On</button>
+            <div class="sound-theme" aria-label="Keypress sound theme">
+              <span class="sound-theme-label">Key Sound</span>
+              <div class="sound-theme-options" role="group" aria-label="Keypress sound theme">
+                <button class="active" type="button" data-sound-theme="mechanical" aria-pressed="true">Click</button>
+                <button type="button" data-sound-theme="soft" aria-pressed="false">Tap</button>
+                <button type="button" data-sound-theme="none" aria-pressed="false">None</button>
+              </div>
+            </div>
             <button class="how-to-play-link" id="howToPlayButton" type="button">How to play</button>
           </div>
         </div>
@@ -586,6 +620,14 @@
           <h2>Paused</h2>
           <button class="primary" id="resumeButton">Resume</button>
           <button class="sound-toggle" id="pauseMuteButton" type="button" aria-pressed="false">Sound On</button>
+          <div class="sound-theme" aria-label="Keypress sound theme">
+            <span class="sound-theme-label">Key Sound</span>
+            <div class="sound-theme-options" role="group" aria-label="Keypress sound theme">
+              <button class="active" type="button" data-sound-theme="mechanical" aria-pressed="true">Click</button>
+              <button type="button" data-sound-theme="soft" aria-pressed="false">Tap</button>
+              <button type="button" data-sound-theme="none" aria-pressed="false">None</button>
+            </div>
+          </div>
           <button id="restartButton">Restart</button>
         </div>
       </div>
@@ -1202,7 +1244,9 @@
       const PERSONAL_BESTS_KEY = "typequest-personal-bests-v1";
       const LIFETIME_STATS_KEY = "typequest-lifetime-stats-v1";
       const SOUND_MUTED_KEY = "typequest-sound-muted-v1";
+      const KEYPRESS_SOUND_THEME_KEY = "typequest-keypress-sound-theme-v1";
       const ONBOARDING_SEEN_KEY = "typequest-onboarding-seen-v1";
+      const KEYPRESS_SOUND_THEMES = ["mechanical", "soft", "none"];
       const PERSONAL_BEST_FIELDS = [
         { key: "netWpm", label: "Net WPM" },
         { key: "rawWpm", label: "Raw WPM" },
@@ -1214,6 +1258,7 @@
 
       let audioCtx;
       let soundMuted = readSoundMuted();
+      let keypressSoundTheme = readKeypressSoundTheme();
       let state = makeState();
       let last = performance.now();
       let raf = 0;
@@ -1472,6 +1517,24 @@
         return true;
       }
 
+      function readKeypressSoundTheme() {
+        try {
+          const storedTheme = window.localStorage.getItem(KEYPRESS_SOUND_THEME_KEY);
+          return KEYPRESS_SOUND_THEMES.includes(storedTheme) ? storedTheme : "mechanical";
+        } catch (error) {
+          return "mechanical";
+        }
+      }
+
+      function writeKeypressSoundTheme(theme) {
+        try {
+          window.localStorage.setItem(KEYPRESS_SOUND_THEME_KEY, theme);
+        } catch (error) {
+          return false;
+        }
+        return true;
+      }
+
       function readOnboardingSeen() {
         try {
           return window.localStorage.getItem(ONBOARDING_SEEN_KEY) === "true";
@@ -1524,6 +1587,21 @@
         });
       }
 
+      function updateKeypressSoundThemeButtons() {
+        document.querySelectorAll("[data-sound-theme]").forEach(button => {
+          const isActive = button.dataset.soundTheme === keypressSoundTheme;
+          button.classList.toggle("active", isActive);
+          button.setAttribute("aria-pressed", String(isActive));
+        });
+      }
+
+      function setKeypressSoundTheme(theme) {
+        if (!KEYPRESS_SOUND_THEMES.includes(theme)) return;
+        keypressSoundTheme = theme;
+        writeKeypressSoundTheme(keypressSoundTheme);
+        updateKeypressSoundThemeButtons();
+      }
+
       function toggleSoundMuted() {
         soundMuted = !soundMuted;
         writeSoundMuted(soundMuted);
@@ -1532,11 +1610,16 @@
 
       function beep(type) {
         if (soundMuted || !audioCtx) return;
+        if (type === "key" && keypressSoundTheme === "none") return;
         const now = audioCtx.currentTime;
         const osc = audioCtx.createOscillator();
         const gain = audioCtx.createGain();
+        const keySettings = {
+          mechanical: [660, 0.035, "square", 0.035],
+          soft: [520, 0.045, "sine", 0.022]
+        };
         const settings = {
-          key: [660, 0.035, "square", 0.035],
+          key: keySettings[keypressSoundTheme] || keySettings.mechanical,
           complete: [880, 0.09, "triangle", 0.06],
           hit: [130, 0.18, "sawtooth", 0.07],
           start: [440, 0.12, "triangle", 0.05],
@@ -2901,9 +2984,13 @@
       document.getElementById("howToPlayButton").addEventListener("click", () => showOnboarding(true));
       document.getElementById("closeOnboardingButton").addEventListener("click", closeOnboarding);
       els.muteButtons.forEach(button => button.addEventListener("click", toggleSoundMuted));
+      document.querySelectorAll("[data-sound-theme]").forEach(button => {
+        button.addEventListener("click", () => setKeypressSoundTheme(button.dataset.soundTheme));
+      });
       window.addEventListener("keydown", handleKey);
 
       updateMuteButtons();
+      updateKeypressSoundThemeButtons();
       updateHud();
       updatePersonalBestsDisplay();
       updateLifetimeStatsDisplay();

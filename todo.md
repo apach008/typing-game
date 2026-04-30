@@ -30,7 +30,7 @@ To do, ordered by impact (highest first):
   - Cover: target priority (always the next threat), hearts, streaks, powerups, what each entity type means.
   - Broad first-impression impact — every new player needs this once.
 
-- [ ] Add a keypress sound theme picker.
+- [x] Add a keypress sound theme picker.
   - Options: mechanical click, soft tap, none. Persist choice.
   - Signature feature of typing trainers (Monkeytype, keybr) — players hear this thousands of times per session, so letting them tune it is unusually high-impact for the work involved.
 
