@@ -941,6 +941,7 @@
               <canvas id="finalChart" width="512" height="180" aria-label="Net WPM and accuracy over time"></canvas>
             </div>
           </div>
+          <button class="primary" id="continueButton" hidden>Continue from Level 1</button>
           <button class="primary" id="againButton">Run Again</button>
         </div>
       </div>
@@ -999,6 +1000,8 @@
         finalWeakBigrams: document.getElementById("finalWeakBigrams"),
         finalChartWrap: document.getElementById("finalChartWrap"),
         finalChart: document.getElementById("finalChart"),
+        continueButton: document.getElementById("continueButton"),
+        againButton: document.getElementById("againButton"),
         personalBestsTitle: document.getElementById("personalBestsTitle"),
         bestNetWpm: document.getElementById("bestNetWpm"),
         bestRawWpm: document.getElementById("bestRawWpm"),
@@ -1744,6 +1747,7 @@
           themeIndex: 0,
           boss: null,
           defeatedBossLevels: [],
+          adventureContinueLevel: 0,
           action: "run",
           actionClock: 0,
           hurtClock: 0,
@@ -2715,6 +2719,76 @@
         focusWithoutScroll(document.getElementById("startButton"));
       }
 
+      function adventureCheckpointLevel() {
+        if (state.runMode !== "adventure") return 0;
+        const checkpoint = state.adventureContinueLevel || 0;
+        const maxLevel = runModes.adventure.maxLevel;
+        return checkpoint >= 2 && checkpoint <= maxLevel ? checkpoint : 0;
+      }
+
+      function canContinueAdventure(won) {
+        return !won && state.runMode === "adventure" && adventureCheckpointLevel() > 0;
+      }
+
+      function resetTransientRunState() {
+        state.entities = [];
+        state.boss = null;
+        state.typed = "";
+        state.typoLock = 0;
+        state.expectedFlash = 0;
+        state.reactionTargetKey = "";
+        state.spawnClock = 0;
+        state.nextSpawn = 1.1;
+        state.action = "run";
+        state.actionClock = 0;
+        state.hurtClock = 0;
+        state.screenShake = 0;
+        state.comboBurst = 0;
+        state.comboBurstLabel = "";
+        state.powerups = {
+          focus: 0,
+          shield: 0,
+          magnet: 0,
+          frenzy: 0,
+          message: "",
+          messageClock: 0
+        };
+        state.camera = {
+          boss: 0,
+          bossDuration: 1,
+          impact: 0,
+          impactDuration: 1,
+          slowmo: 0,
+          slowmoDuration: 1
+        };
+        state.effects = [];
+      }
+
+      function continueAdventure() {
+        const checkpointLevel = adventureCheckpointLevel();
+        if (!checkpointLevel || state.mode !== "over") return;
+        state.score = Math.floor(state.score * 0.5);
+        state.hearts = STARTING_HEARTS;
+        state.streak = 0;
+        state.elapsed = (checkpointLevel - 1) * 18;
+        state.level = checkpointLevel;
+        state.themeIndex = Math.min(levelThemes.length - 1, checkpointLevel - 1);
+        state.timeLeft = Math.max(20, state.timeLeft);
+        state.countdown = COUNTDOWN_SECONDS;
+        state.mode = "playing";
+        resetTransientRunState();
+        els.gameOverScreen.hidden = true;
+        els.pauseScreen.hidden = true;
+        if (shouldStartBoss(state.level)) {
+          startBossEncounter(state.level);
+        } else {
+          spawnEntity(660);
+          spawnEntity(930);
+        }
+        triggerComboBurst(`Continued at Level ${checkpointLevel}`, 1.2);
+        updateHud();
+      }
+
       function endGame(message, won = false) {
         state.mode = "over";
         const finalRawWpm = currentRawWpm();
@@ -2765,6 +2839,11 @@
         drawFinalChart(state.samples);
         els.newBestBanner.hidden = !improvedBests.length;
         els.newBestBanner.textContent = improvedBests.length ? `New Best! ${improvedBests.join(", ")}` : "New Best!";
+        const checkpointLevel = adventureCheckpointLevel();
+        const canContinue = canContinueAdventure(won);
+        els.continueButton.hidden = !canContinue;
+        els.continueButton.textContent = `Continue from Level ${checkpointLevel} (-50% score)`;
+        els.againButton.classList.toggle("primary", !canContinue);
         updatePersonalBestsDisplay();
         updateLifetimeStatsDisplay();
         els.pauseScreen.hidden = true;
@@ -2889,6 +2968,9 @@
         if (target.type === "boss") {
           state.boss = null;
           state.defeatedBossLevels.push(target.level);
+          if (state.runMode === "adventure") {
+            state.adventureContinueLevel = Math.min(target.level + 1, runModes.adventure.maxLevel);
+          }
           state.timeLeft += BOSS_TIME_BONUS;
           if (state.runMode === "adventure" && target.level === runModes.adventure.finalBossLevel) {
             state.score += ADVENTURE_CLEAR_BONUS;
@@ -3947,7 +4029,8 @@
       });
 
       document.getElementById("startButton").addEventListener("click", startGame);
-      document.getElementById("againButton").addEventListener("click", startGame);
+      els.againButton.addEventListener("click", startGame);
+      els.continueButton.addEventListener("click", continueAdventure);
       document.getElementById("resumeButton").addEventListener("click", resumeGame);
       document.getElementById("restartButton").addEventListener("click", startGame);
       document.getElementById("quitToMenuButton").addEventListener("click", quitToMenu);

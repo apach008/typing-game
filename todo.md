@@ -40,7 +40,7 @@ To do, ordered by impact (highest first):
   - Disables threats, focuses purely on sustained typing — pairs with the runner mode rather than replacing it.
   - Most typing trainers have this for a reason: real prose has rhythm and capitalization patterns that single-word drills don't reproduce.
 
-- [ ] Add a checkpoint or continue option in Adventure mode.
+- [x] Add a checkpoint or continue option in Adventure mode.
   - Dying on level 4 currently forces a restart from 1, which is the main reason players abandon Adventure.
   - Cheapest version: on game over in Adventure with at least one boss defeated, offer "Continue from Level N" for a score penalty (e.g. -50%).
 
