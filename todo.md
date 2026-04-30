@@ -142,91 +142,81 @@
   - Rain in ruins, embers in lava cave, fireflies in forest.
   - Keep effects lightweight so performance stays stable.
 
-## Priority 4: Audio
+## Priority 4: Progression And Persistence
 
-- [ ] Add a mute toggle and volume slider.
-  - Store preference in `localStorage`.
-  - Web Audio effects are useful, but users need control.
+- [ ] Add persistent personal bests per difficulty.
+  - Best Net WPM, best Raw WPM, best accuracy, longest streak, top score — keyed by difficulty in `localStorage`.
+  - Show on the start screen; flash a "New Best!" banner on the game-over screen when beaten.
+  - This is what turns a one-off game into a trainer. Highest-impact remaining item.
 
-- [ ] Add separate sound effects.
-  - Keypress tick.
-  - Word complete.
-  - Sword attack.
-  - Jump.
-  - Damage.
-  - Level up.
-  - Game over.
-
-- [ ] Add audio ducking during errors and game over.
-  - Makes important events more obvious.
+- [ ] Add lifetime typing stats.
+  - Cumulative words typed, total runs, total time on task.
+  - Persistent letter-mistake heatmap that aggregates across runs (extends the existing per-run weakness tracker).
+  - Gives players a real "am I improving?" signal, which the per-run breakdown alone cannot provide.
 
 ## Priority 5: UI And Menus
 
 - [ ] Add a pause menu.
-  - `Esc` pauses.
-  - Include Resume, Restart, Mute, and Exit to Menu.
+  - `Esc` pauses. Show Resume and Restart only — no "Exit to Menu" until there is a meaningful menu state to return to.
+  - Practice sessions get interrupted by every notification and tab switch; without pause the run is just lost.
 
-- [ ] Add an instructions panel.
-  - Keep it compact.
-  - Explain typing target priority, streak bonuses, hearts, and powerups.
+- [ ] Add a one-screen onboarding overlay.
+  - Triggered on first load (gated by a `localStorage` flag) and reachable from a "How to play" link on the start screen.
+  - Cover: target priority (always the next threat), hearts, streaks, powerups, what each entity type means.
+  - Broad first-impression impact — every new player needs this once.
 
-- [ ] Add difficulty descriptions.
-  - Easy: shorter words, slower threats, forgiving timers.
-  - Normal: balanced adventure.
-  - Hard: longer words, denser threats, strict pacing.
+- [ ] Add a settings panel.
+  - Mute toggle, sound theme, default typing mode (beginner/advanced/expert), default difficulty.
+  - Reachable from start screen and pause menu.
+  - Becomes valuable once the persistence and audio items below are in place.
 
-- [ ] Add high scores.
-  - Store best score, best WPM, best accuracy, and longest streak per difficulty in `localStorage`.
-  - Show personal bests on the start and game-over screens.
+- [ ] Add inline difficulty descriptions on the start screen.
+  - One-liner under each option so players choose deliberately. No separate modal.
+  - Easy: short common words, slow threats, forgiving timers.
+  - Normal: balanced runner pacing.
+  - Hard: longer/rarer words, dense threats, strict pacing.
 
-- [ ] Add a run summary chart.
-  - Show score and WPM over time with a small canvas or SVG-free custom drawing.
+## Priority 6: Audio
 
-- [ ] Add seed display and copyable challenge code.
-  - Lets players replay or share the same run.
+- [ ] Add a mute toggle.
+  - Single binary toggle, persisted to `localStorage`. Volume slider is overkill for ~5 sounds and unused in serious typing apps.
+  - Reachable from the start screen and the pause menu.
 
-## Priority 6: Code Architecture
+- [ ] Add a keypress sound theme picker.
+  - Options: mechanical click, soft tap, none. Persist choice.
+  - Signature feature of typing trainers (Monkeytype, keybr) — players hear this thousands of times per session, so letting them tune it is unusually high-impact for the work involved.
 
-- [ ] Split the single script into clear internal modules while staying in one HTML file.
-  - `config`
-  - `state`
-  - `input`
-  - `audio`
-  - `spawning`
-  - `scoring`
-  - `rendering`
-  - `ui`
-
-- [ ] Replace magic numbers with named constants.
-  - Hero hit line.
-  - Ground height.
-  - Entity dimensions.
-  - Spawn margins.
-  - Action durations.
-
-- [ ] Make difficulty config more expressive.
-  - Speed range.
-  - Spawn range.
-  - Word length range.
-  - Timer.
-  - Entity mix.
-  - Mistake penalty.
-  - Heart count.
-
-- [ ] Add seeded randomness.
-  - Allows deterministic tests and replayable challenge runs.
-
-- [ ] Avoid sorting entities every frame for current target.
-  - Keep entities ordered by spawn position or cache current target.
-  - Current list is small, but this becomes cleaner as mechanics grow.
+- [ ] Refocus sound effects on typing-loop events.
+  - Keep: keypress tick, word complete, typo error.
+  - Drop the sword / jump / damage / level-up / game-over flavor sounds — those serve the action skin, not the typing practice.
 
 ## Priority 7: Content
 
-- [ ] Add phrase mode.
-  - Short phrases for advanced players.
-  - Use spaces and punctuation as part of the challenge.
+- [ ] Tier word pools by frequency, not only by length.
+  - Easy: top ~200 most-common words for muscle-memory drilling.
+  - Normal: full english_1k (current behavior).
+  - Hard: a rarer pack (e.g. english_5k tail) so the difficulty curve is about word familiarity, not just letter count.
 
-## Priority 11: Deployment And Sharing
+- [ ] Add a targeted drill mode.
+  - Player picks (or auto-suggests from their lifetime mistake heatmap) a letter or bigram, and the next run filters words containing it.
+  - Single highest-value mode for players who actually want to fix specific weaknesses.
 
-- [ ] Add favicon.
-  - Small pixel sword, boot, or type key icon.
+## Priority 8: Deployment And Sharing
+
+- [ ] Add a favicon and page metadata.
+  - Small pixel key/sword icon, `<title>`, and a basic `<meta name="description">` / `og:title` for shareable links.
+
+- [ ] Add a "best on desktop" notice for touch devices.
+  - Detect via `(pointer: coarse)` and show a small banner — typing-practice on a phone keyboard is a frustrating first impression.
+
+## Removed (not high-impact for a typing-practice game)
+
+- Volume slider — single mute toggle covers the real use case.
+- Audio ducking during errors and game over — gamefeel polish.
+- Run summary chart over time — the per-run breakdown already shows the same numbers; charting is heavy for marginal gain.
+- Seed display and copyable challenge code — Daily mode already provides a shared seed once per day, which is the actual use case.
+- Splitting the script into internal modules — no user-facing impact while a single author maintains a 2000-line file.
+- Replacing magic numbers with named constants — internal cleanup; the existing config blocks already cover most tuning.
+- Making difficulty config more expressive — current `palettes` config is already adequate.
+- Optimizing per-frame entity sorting — premature; the entity list stays small.
+- Phrase mode — sentences don't fit the one-bubble-per-threat mechanic; would be a separate game.
